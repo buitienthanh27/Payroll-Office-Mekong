@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Tiền lương Khối Văn phòng - Mekong Rubber</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-sidebar: #FFFDF9;
+            --brand-green: #059669;
+            --text-main: #334155;
+            --bg-body: #F1F5F9;
+            --border-color: #E2E8F0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-body); display: flex; height: 100vh; overflow: hidden; }
+
+        .sidebar { width: 340px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
+        .brand { padding: 0 30px 20px 30px; font-weight: 800; font-size: 18px; color: var(--brand-green); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #FAF9F5; line-height: 1.3; }
+        .brand small { display: block; font-size: 11px; font-weight: 600; color: #64748B; margin-top: 2px; }
+
+        .menu-group { padding: 14px 30px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: 0.2s; -webkit-user-select: none; user-select: none; }
+        .menu-group:hover { background: #F8FAFC; }
+        .group-left { display: flex; align-items: center; gap: 12px; }
+
+        .submenu { display: none; background: #FAF9F5; border-left: 3px solid transparent; }
+        .submenu.open { display: block; border-left-color: var(--brand-green); }
+
+        .menu-item { padding: 10px 24px 10px 55px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; color: #334155; transition: 0.2s; gap: 8px; }
+        .menu-item:hover, .menu-item.active { color: var(--brand-green); background: #F0FDF4; }
+        .item-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .item-left span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .badge-v1 { background: #E6FAF5; color: #059669; font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 700; border: 1px solid #A7F3D0; flex-shrink: 0; }
+        .badge-v2 { background: #FFFBEB; color: #D97706; font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 700; border: 1px solid #FDE68A; flex-shrink: 0; }
+        .menu-item.v2-roadmap { color: #64748B; }
+
+        .main-container { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #content-frame { width: 100%; height: 100%; border: none; background: var(--bg-body); }
+
+        .icon-blue { color: #3b82f6; } .icon-purple { color: #8b5cf6; } .icon-teal { color: #14b8a6; }
+        .icon-orange { color: #f59e0b; } .icon-red { color: #ef4444; } .icon-gray { color: #64748b; }
+        .icon-green { color: #059669; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-leaf"></i>
+        <div>Tiền lương Khối VP<small>Lao động gián tiếp · Mekong Rubber</small></div>
+    </div>
+    <div id="sidebar-container"></div>
+</aside>
+
+<main class="main-container">
+    <iframe id="content-frame" src="about:blank" title="Content Frame"></iframe>
+</main>
+
+<script>
+const PAGE_DIR = '';
+const menuData = [
+    { group: "Dashboard", icon: "fa-chart-pie", color: "icon-green", items: [
+        { n: "Dashboard điều hành", i: "fa-chart-column", file: "dashboard.html", v: 1 },
+    ]},
+    { group: "Hồ sơ lương nhân viên", icon: "fa-id-card", color: "icon-blue", items: [
+        { n: "Danh sách nhân viên", i: "fa-users", file: "danh-sach-nhan-vien.html", v: 1 },
+        { n: "Hồ sơ chi tiết nhân viên", i: "fa-user-pen", file: "ho-so-chi-tiet-nhan-vien.html", v: 1 },
+        { n: "Lịch sử biến động lương", i: "fa-clock-rotate-left", file: "lich-su-bien-dong-luong.html", v: 2 },
+    ]},
+    { group: "Chấm công VP & nghỉ phép", icon: "fa-fingerprint", color: "icon-teal", items: [
+        { n: "Bảng chấm công tháng", i: "fa-table", file: "bang-cham-cong-thang.html", v: 1 },
+        { n: "Quản lý nghỉ phép (xem HRMS)", i: "fa-calendar-check", file: "quan-ly-nghi-phep.html", v: 1 },
+        { n: "Đơn tăng ca (OT - giai đoạn 2)", i: "fa-business-time", file: "don-tang-ca-ot.html", v: 2 },
+        { n: "Đồng bộ dữ liệu chấm công", i: "fa-rotate", file: "dong-bo-du-lieu-cham-cong.html", v: 2 },
+    ]},
+    { group: "Tính lương", icon: "fa-calculator", color: "icon-purple", items: [
+        { n: "Cấu hình cơ cấu thu nhập", i: "fa-coins", file: "cau-hinh-co-cau-thu-nhap.html", v: 1 },
+        { n: "Cấu hình rule/version lương", i: "fa-square-root-variable", file: "cau-hinh-cong-thuc-luong.html", v: 1 },
+        { n: "Bảng lương tháng", i: "fa-file-invoice-dollar", file: "bang-luong-thang.html", v: 1 },
+        { n: "Bảng lương chi tiết (THANH TOAN)", i: "fa-list-check", file: "bang-luong-chi-tiet.html", v: 1 },
+    ]},
+    { group: "Tạm ứng & Khấu trừ lương", icon: "fa-hand-holding-dollar", color: "icon-orange", items: [
+        { n: "Đề nghị tạm ứng lương", i: "fa-money-bill-transfer", file: "de-nghi-tam-ung.html", v: 1 },
+        { n: "Khấu trừ & tiền điện", i: "fa-minus-circle", file: "quan-ly-khau-tru.html", v: 1 },
+    ]},
+    { group: "Đánh giá & KPI", icon: "fa-bullseye", color: "icon-blue", items: [
+        { n: "Cấu hình KPI / tiêu chí", i: "fa-gear", file: "cau-hinh-kpi.html", v: 2 },
+        { n: "Xếp loại A/B/C & chấm điểm", i: "fa-star-half-stroke", file: "cham-diem-kpi.html", v: 2 },
+    ]},
+    { group: "Bảo hiểm & Thuế TNCN", icon: "fa-shield-heart", color: "icon-red", items: [
+        { n: "NSSF / BH Campuchia", i: "fa-shield", file: "bao-hiem.html", v: 1 },
+        { n: "Thuế TNCN Campuchia", i: "fa-file-invoice", file: "thue-tncn.html", v: 1 },
+        { n: "Báo cáo NSSF", i: "fa-file-export", file: "bao-cao-bao-hiem.html", v: 1 },
+    ]},
+    { group: "Duyệt & Chi trả lương", icon: "fa-circle-check", color: "icon-green", items: [
+        { n: "Duyệt bảng lương", i: "fa-stamp", file: "duyet-bang-luong.html", v: 1 },
+        { n: "Chi trả nhiều đợt (giai đoạn 2)", i: "fa-calendar-days", file: "chi-tra-nhieu-dot.html", v: 2 },
+        { n: "Phiếu lương điện tử", i: "fa-receipt", file: "phieu-luong.html", v: 1 },
+    ]},
+    { group: "Báo cáo quản trị", icon: "fa-chart-line", color: "icon-purple", items: [
+        { n: "PHAN TOAN / TONG HOP", i: "fa-chart-pie", file: "bao-cao-quy-luong.html", v: 1 },
+        { n: "Báo cáo biến động lương", i: "fa-arrows-up-down", file: "bao-cao-bien-dong.html", v: 2 },
+        { n: "Import / Export Excel", i: "fa-file-excel", file: "import-export-excel.html", v: 1 },
+    ]},
+    { group: "Hệ thống & Phân quyền", icon: "fa-gear", color: "icon-gray", items: [
+        { n: "Người dùng & phân quyền", i: "fa-user-lock", file: "nguoi-dung-phan-quyen.html", v: 1 },
+        { n: "Danh mục nền", i: "fa-database", file: "danh-muc-nen.html", v: 1 },
+        { n: "Cấu hình hệ thống", i: "fa-sliders", file: "cau-hinh-he-thong.html", v: 1 },
+        { n: "Nhật ký hệ thống", i: "fa-clipboard-list", file: "nhat-ky-he-thong.html", v: 2 },
+    ]},
+];
+
+const container = document.getElementById('sidebar-container');
+menuData.forEach((m, idx) => {
+    container.innerHTML += `
+        <div class="menu-group" onclick="toggleSub(${idx})">
+            <div class="group-left">
+                <i class="fa-solid ${m.icon} ${m.color}"></i> ${m.group}
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size: 10px; color: #94A3B8;"></i>
+        </div>`;
+
+    const sub = document.createElement('div');
+    sub.id = 'sub' + idx;
+    sub.className = 'submenu';
+
+    m.items.forEach(item => {
+        const isV2 = item.v === 2;
+        const badgeHtml = isV2
+            ? '<span class="badge-v2">Giai đoạn 2</span>'
+            : '<span class="badge-v1">Giai đoạn 1</span>';
+        const extraClass = isV2 ? 'v2-roadmap' : '';
+
+        sub.innerHTML += `
+            <div class="menu-item ${extraClass}" onclick="switchFrame(this, '${item.file}')">
+                <div class="item-left">
+                    <i class="fa-solid ${item.i}"></i> <span>${item.n}</span>
+                </div>
+            </div>`;
+    });
+    container.appendChild(sub);
+});
+
+function toggleSub(id) {
+    document.getElementById('sub' + id).classList.toggle('open');
+}
+
+function switchFrame(element, fileName) {
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    document.getElementById('content-frame').src = PAGE_DIR + fileName;
+}
+
+window.onload = function() {
+    document.getElementById('sub0').classList.add('open');
+    const first = document.querySelector('.menu-item');
+    if (first) first.click();
+};
+</script>
+</body>
+</html>

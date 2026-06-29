@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Người dùng & phân quyền - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .switch{ position:relative; width:38px; height:21px; display:inline-block; } .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:9999px; transition:.2s; cursor:pointer; }
+  .slider:before{ content:""; position:absolute; height:15px; width:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#10b981; } .switch input:checked + .slider:before{ transform:translateX(17px); }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-users" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Người dùng &amp; phân quyền</h1>
+      <p class="text-sm text-slate-500 mt-1">Quản lý tài khoản truy cập hệ thống tiền lương khối văn phòng.</p>
+    </div>
+    <button id="btn-new" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-user-plus"></i> Thêm người dùng</button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-3">
+        <input id="f-search" type="text" placeholder="Tìm tên, email..." class="flex-1 min-w-[180px] pl-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+        <select id="f-role" class="inp bg-white text-sm"><option value="">Tất cả vai trò</option></select>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-600 font-medium">
+            <tr><th class="px-4 py-3">Người dùng</th><th class="px-4 py-3">Vai trò</th><th class="px-4 py-3">Phạm vi</th>
+            <th class="px-4 py-3 text-center">Kích hoạt</th><th class="px-4 py-3">Đăng nhập cuối</th><th class="px-4 py-3 text-center">Sửa</th></tr>
+          </thead>
+          <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 h-fit sticky top-6">
+      <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-brand"></i> Ma trận quyền</h2>
+      <p class="text-xs text-slate-500 mb-3">Vai trò: <b id="role-name">Quản trị viên</b></p>
+      <div class="space-y-2 text-sm max-h-[360px] overflow-y-auto" id="perm-list"></div>
+    </div>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="font-bold text-slate-800" id="m-title">Thêm người dùng</h3>
+      <button id="m-close" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <label class="text-sm block">Họ tên<input id="m-name" type="text" class="inp w-full mt-1" /></label>
+      <label class="text-sm block">Email<input id="m-email" type="email" class="inp w-full mt-1" /></label>
+      <label class="text-sm block">Vai trò<select id="m-role" class="inp w-full mt-1 bg-white"></select></label>
+      <label class="text-sm block">Phạm vi<select id="m-scope" class="inp w-full mt-1 bg-white">
+        <option>Toàn công ty</option><option>Việt Nam</option><option>Lào</option><option>Campuchia</option></select></label>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="m-cancel" class="text-sm border border-slate-200 px-4 py-2 rounded-lg">Hủy</button>
+      <button id="m-save" class="text-sm bg-brand text-white font-semibold px-4 py-2 rounded-lg">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ROLES={
+    admin:{ name:'Quản trị viên', perms:['Xem tất cả','Tính lương','Duyệt lương','Chi trả','Cấu hình hệ thống','Phân quyền'] },
+    accountant:{ name:'Kế toán lương', perms:['Xem bảng lương','Tính lương','Import/Export','BHXH & Thuế','Chuyển NH'] },
+    manager:{ name:'Trưởng phòng', perms:['Xem bảng lương PB','Duyệt OT','Xem phiếu lương PB'] },
+    viewer:{ name:'Chỉ xem', perms:['Xem báo cáo','Xem dashboard'] },
+  };
+
+  let DATA=[
+    ['u1','Nguyễn Thị Lan','lan.nguyen@mekong.vn','admin','Toàn công ty',true,'19/06/2026 08:12'],
+    ['u2','Trần Văn Đức','duc.tran@mekong.vn','accountant','Việt Nam',true,'18/06/2026 16:45'],
+    ['u3','Lê Hoàng Cường','cuong.le@mekong.vn','manager','Phòng TC-KT',true,'17/06/2026 09:30'],
+    ['u4','Phạm Minh Tú','tu.pham@mekong.vn','viewer','Toàn công ty',false,'—'],
+  ];
+
+  Object.keys(ROLES).forEach(k=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=ROLES[k].name;
+    document.getElementById('f-role').appendChild(o.cloneNode(true));
+    document.getElementById('m-role').appendChild(o);
+  });
+
+  function showPerms(role){
+    const r=ROLES[role]||ROLES.viewer;
+    document.getElementById('role-name').textContent=r.name;
+    document.getElementById('perm-list').innerHTML=r.perms.map(p=>
+      `<div class="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"><i class="fa-solid fa-check text-emerald-500 text-xs"></i>${p}</div>`).join('');
+  }
+
+  function render(){
+    const q=document.getElementById('f-search').value.trim().toLowerCase();
+    const role=document.getElementById('f-role').value;
+    const rows=DATA.filter(d=>(!q||d[1].toLowerCase().includes(q)||d[2].toLowerCase().includes(q))&&(!role||d[3]===role));
+
+    document.getElementById('tbl-body').innerHTML=rows.map((d,i)=>`
+      <tr class="hover:bg-slate-50 cursor-pointer role-row" data-role="${d[3]}">
+        <td class="px-4 py-2.5"><p class="font-semibold">${d[1]}</p><p class="text-xs text-slate-400">${d[2]}</p></td>
+        <td class="px-4 py-2.5"><span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">${ROLES[d[3]].name}</span></td>
+        <td class="px-4 py-2.5 text-slate-600">${d[4]}</td>
+        <td class="px-4 py-2.5 text-center"><label class="switch"><input type="checkbox" data-id="${d[0]}" ${d[5]?'checked':''}><span class="slider"></span></label></td>
+        <td class="px-4 py-2.5 text-slate-500 text-xs">${d[6]}</td>
+        <td class="px-4 py-2.5 text-center"><button data-id="${d[0]}" class="btn-edit text-brand"><i class="fa-solid fa-pen"></i></button></td></tr>`).join('');
+
+    document.querySelectorAll('.role-row').forEach(r=> r.onclick=e=>{
+      if(e.target.closest('.switch')||e.target.closest('.btn-edit')) return;
+      showPerms(r.dataset.role);
+    });
+    document.querySelectorAll('.switch input').forEach(inp=> inp.onchange=()=>{
+      const u=DATA.find(d=>d[0]===inp.dataset.id); if(u) u[5]=inp.checked;
+    });
+    if(rows.length) showPerms(rows[0][3]);
+  }
+
+  const modal=document.getElementById('modal');
+  const closeM=()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  document.getElementById('btn-new').onclick=()=>{ document.getElementById('m-title').textContent='Thêm người dùng'; modal.classList.remove('hidden'); modal.classList.add('flex'); };
+  document.getElementById('m-close').onclick=closeM; document.getElementById('m-cancel').onclick=closeM;
+  document.getElementById('m-save').onclick=()=>{
+    const name=document.getElementById('m-name').value.trim();
+    if(!name) return;
+    DATA.push(['u'+Date.now(), name, document.getElementById('m-email').value, document.getElementById('m-role').value, document.getElementById('m-scope').value, true, '—']);
+    closeM(); render();
+  };
+  document.getElementById('f-search').oninput=render;
+  document.getElementById('f-role').onchange=render;
+  render();
+})();
+</script>
+</body>
+</html>

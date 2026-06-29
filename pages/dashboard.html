@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Tiền lương - Khối Văn phòng</title>
+<!-- Tailwind / Chart.js / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-dashboard"> trở xuống (và <script> cuối) -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-dashboard" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Tiêu đề + bộ lọc kỳ lương -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Dashboard điều hành - Payroll Văn phòng Campuchia</h1>
+      <p class="text-sm text-slate-500 mt-1">Lao động gián tiếp · Kỳ đối soát Excel tháng 01/2026 · USD là tiền tệ chính</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select title="Chọn kỳ" aria-label="Chọn kỳ" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+        <option>Kỳ: Tháng 01/2026</option>
+        <option>Kỳ: Tháng 02/2026</option>
+        <option>Kỳ: Tháng 03/2026</option>
+      </select>
+      <select title="Chọn đơn vị" aria-label="Chọn đơn vị" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+        <option>Toàn công ty</option>
+        <option>Văn phòng Công ty</option>
+        <option>Khối phòng ban</option>
+      </select>
+      <button class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-file-export"></i> Xuất báo cáo
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-12 gap-6">
+    <!-- CỘT CHÍNH -->
+    <div class="col-span-12 xl:col-span-9 space-y-6">
+
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-slate-500 font-medium">Tổng gross tháng</p>
+              <h3 class="text-2xl font-extrabold text-slate-800 mt-1">29,591.24 <span class="text-sm font-normal text-slate-400">USD</span></h3>
+            </div>
+            <div class="p-2.5 bg-emerald-100 rounded-xl text-brand"><i class="fa-solid fa-sack-dollar"></i></div>
+          </div>
+          <p class="text-xs text-emerald-600 mt-3 font-semibold"><i class="fa-solid fa-check"></i> Khớp tổng `THANH TOAN` / `PHAN TOAN`</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-slate-500 font-medium">Nhân sự tính lương</p>
+              <h3 class="text-2xl font-extrabold text-slate-800 mt-1">38 <span class="text-sm font-normal text-slate-400">người</span></h3>
+            </div>
+            <div class="p-2.5 bg-blue-100 rounded-xl text-blue-600"><i class="fa-solid fa-users"></i></div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3">Cần chốt cách đếm 37-39 dòng Excel</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-slate-500 font-medium">Gross bình quân</p>
+              <h3 class="text-2xl font-extrabold text-slate-800 mt-1">778.72 <span class="text-sm font-normal text-slate-400">USD/người</span></h3>
+            </div>
+            <div class="p-2.5 bg-purple-100 rounded-xl text-purple-600"><i class="fa-solid fa-chart-line"></i></div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3">Tính từ gross / 38 nhân sự</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-slate-500 font-medium">Cấu hình đang áp dụng</p>
+              <h3 class="text-2xl font-extrabold text-slate-800 mt-1">4,026 <span class="text-sm font-normal text-slate-400">KHR/USD</span></h3>
+            </div>
+            <div class="p-2.5 bg-orange-100 rounded-xl text-orange-600"><i class="fa-solid fa-calendar-check"></i></div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3">26 ngày công chuẩn · Rule VP-2026.01</p>
+        </div>
+      </div>
+
+      <!-- Biểu đồ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold text-slate-800">Cơ cấu gross kỳ 01/2026</h2>
+            <span class="text-xs text-slate-400">Đơn vị: USD</span>
+          </div>
+          <div class="relative h-72 w-full"><canvas id="salaryTrendChart"></canvas></div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <h2 class="text-lg font-bold text-slate-800 mb-4">Cơ cấu thu nhập</h2>
+          <div class="relative h-72 w-full flex justify-center"><canvas id="structureChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Bảng quỹ lương theo phòng ban -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-slate-800">PHAN TOAN - Quỹ lương theo phòng ban</h2>
+          <a href="#" class="text-sm font-medium text-brand hover:underline">Xem báo cáo chi tiết &rarr;</a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-600 font-medium">
+              <tr>
+                <th class="px-5 py-3">Phòng ban</th>
+                <th class="px-5 py-3 text-center">Số NV</th>
+                <th class="px-5 py-3 text-right">Gross (USD)</th>
+                <th class="px-5 py-3 text-right">BQ (USD/người)</th>
+                <th class="px-5 py-3 text-center">Đối soát</th>
+              </tr>
+            </thead>
+            <tbody id="dept-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: cảnh báo & tiến độ -->
+    <div class="col-span-12 xl:col-span-3 space-y-6">
+
+      <!-- Cảnh báo -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-red-200">
+        <div class="flex items-center gap-2 mb-4 text-red-600">
+          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+          <h2 class="text-lg font-bold">Cảnh báo cần xử lý</h2>
+        </div>
+        <div class="space-y-4">
+          <div class="p-3 bg-red-50 rounded-xl border border-red-100">
+            <div class="flex justify-between items-start mb-1">
+              <h4 class="font-bold text-red-700 text-sm">Bảng lương chờ TP TC-KT</h4>
+              <span class="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded-full">Cao</span>
+            </div>
+            <p class="text-xs text-red-600 mb-2">Kỳ 01/2026 đã tính xong, đang chờ TP TC-KT kiểm tra trước khi chuyển Giám đốc Tài chính.</p>
+            <a href="#" class="text-xs font-medium text-red-700 hover:underline">Đến duyệt bảng lương &rarr;</a>
+          </div>
+          <div class="p-3 bg-orange-50 rounded-xl border border-orange-100">
+            <div class="flex justify-between items-start mb-1">
+              <h4 class="font-bold text-orange-700 text-sm">Mapping tiền điện cần chốt</h4>
+              <span class="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full">TB</span>
+            </div>
+            <p class="text-xs text-orange-600 mb-2">Một số ví dụ giữa sheet Điện và cột AJ cần xác nhận lại quy tắc mapping.</p>
+            <a href="#" class="text-xs font-medium text-orange-700 hover:underline">Kiểm tra khấu trừ &rarr;</a>
+          </div>
+          <div class="p-3 bg-yellow-50 rounded-xl border border-yellow-100">
+            <div class="flex justify-between items-start mb-1">
+              <h4 class="font-bold text-yellow-700 text-sm">Rounding NSSF</h4>
+              <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">TB</span>
+            </div>
+            <p class="text-xs text-yellow-600 mb-2">Giá trị trần NSSF có thể hiển thị 5.96 hoặc 5.97 USD tùy quy tắc làm tròn.</p>
+            <a href="#" class="text-xs font-medium text-yellow-700 hover:underline">Xem cấu hình NSSF &rarr;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tiến độ kỳ lương -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">Tiến độ kỳ lương 01/2026</h2>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-slate-600 font-medium">Quy trình duyệt (2/4 bước)</span><span class="font-bold text-brand">50%</span></div>
+            <div class="w-full bg-slate-200 rounded-full h-2"><div class="bg-brand h-2 rounded-full w-1/2"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-slate-600 font-medium">Đối soát Excel</span><span class="font-bold text-emerald-600">85%</span></div>
+            <div class="w-full bg-slate-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full w-[85%]"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-slate-600 font-medium">Đối chiếu NSSF/PIT</span><span class="font-bold text-yellow-500">70%</span></div>
+            <div class="w-full bg-slate-200 rounded-full h-2"><div class="bg-yellow-400 h-2 rounded-full w-[70%]"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cấu hình rule -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">Cấu hình rule đang áp dụng</h2>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span class="text-slate-500">Formula</span><span class="font-bold text-slate-800">VP-2026.01</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">PIT</span><span class="font-bold text-slate-800">PIT-KH-2026.01</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">NSSF</span><span class="font-bold text-slate-800">NSSF-KH-2026.01</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Ngày công chuẩn</span><span class="font-bold text-slate-800">26</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function(){
+    const init = () => {
+      if (!window.Chart) return;
+      const CFG = window.MKC_PAYROLL_VP_CONFIG;
+      const usd = (v)=> v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const deptBody = document.getElementById('dept-body');
+      if (deptBody && CFG) {
+        deptBody.innerHTML = CFG.departments.map(d => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-5 py-3 font-medium text-slate-800">${d.name}</td>
+            <td class="px-5 py-3 text-center">${d.employees}</td>
+            <td class="px-5 py-3 text-right font-semibold">${usd(d.gross)}</td>
+            <td class="px-5 py-3 text-right">${usd(d.gross / d.employees)}</td>
+            <td class="px-5 py-3 text-center"><span class="bg-emerald-100 text-emerald-700 py-1 px-2 rounded-md text-xs font-bold">Khớp PHAN TOAN</span></td>
+          </tr>
+        `).join('');
+      }
+
+      new Chart(document.getElementById('salaryTrendChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Lương TG','Tiền ăn','Tiền nhà','Nghỉ phép','Lễ/Tết','Thưởng'],
+          datasets: [
+            { type:'bar', label:'Gross components', data:[
+              CFG.totals.timeSalary,
+              CFG.totals.meal,
+              CFG.totals.house,
+              CFG.totals.leaveSalary,
+              CFG.totals.holidaySalary,
+              CFG.totals.holidayBonus
+            ], backgroundColor:['#059669','#10b981','#34d399','#6ee7b7','#f59e0b','#fbbf24'], borderRadius:4 }
+          ]
+        },
+        options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+          plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8 } } },
+          scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, beginAtZero:true, grid:{color:'#f1f5f9'} } } }
+      });
+
+      new Chart(document.getElementById('structureChart'), {
+        type: 'doughnut',
+        data: { labels:['Lương thời gian','Tiền ăn','Tiền nhà','Lễ/Tết & thưởng'],
+          datasets:[{ data:[
+            CFG.totals.timeSalary,
+            CFG.totals.meal,
+            CFG.totals.house,
+            CFG.totals.holidaySalary + CFG.totals.holidayBonus + CFG.totals.leaveSalary
+          ], backgroundColor:['#059669','#10b981','#34d399','#f59e0b'], borderWidth:0, hoverOffset:4 }] },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
+          plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, padding:14 } },
+            tooltip:{ callbacks:{ label:(c)=>' '+c.label+': '+usd(c.parsed)+' USD' } } } }
+      });
+    };
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+  })();
+</script>
+</body>
+</html>

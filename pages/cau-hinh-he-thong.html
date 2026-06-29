@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cấu hình hệ thống - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; width:100%; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .switch{ position:relative; width:38px; height:21px; display:inline-block; } .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:9999px; transition:.2s; cursor:pointer; }
+  .slider:before{ content:""; position:absolute; height:15px; width:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#10b981; } .switch input:checked + .slider:before{ transform:translateX(17px); }
+  .nav-item.active{ background:#ecfdf5; color:#059669; border-left:3px solid #10b981; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-system-config" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Cấu hình hệ thống</h1>
+    <p class="text-sm text-slate-500 mt-1">Thiết lập chung cho payroll văn phòng Campuchia: USD, KHR, rule version và workflow duyệt.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-2 space-y-0.5">
+      <button class="nav-item active w-full text-left px-4 py-3 rounded-lg text-sm font-medium" data-pane="general"><i class="fa-solid fa-gear w-5"></i> Chung</button>
+      <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="payroll"><i class="fa-solid fa-calendar w-5"></i> Kỳ lương</button>
+      <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="notify"><i class="fa-solid fa-bell w-5"></i> Thông báo</button>
+      <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="email"><i class="fa-solid fa-envelope w-5"></i> Email / SMS</button>
+      <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="integrate"><i class="fa-solid fa-plug w-5"></i> Tích hợp</button>
+    </div>
+
+    <div class="lg:col-span-3 space-y-4">
+      <!-- Chung -->
+      <div id="pane-general" class="config-pane bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3">Thông tin đơn vị</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="text-sm block">Tên công ty<input class="inp mt-1" value="Công ty TNHH Cao su VRG Mekong" /></label>
+          <label class="text-sm block">Mã đơn vị<input class="inp mt-1 font-mono" value="MKC-KH" /></label>
+          <label class="text-sm block">Mã NSSF / cơ quan BH<input class="inp mt-1 font-mono" value="NSSF-MKC-2026" /></label>
+          <label class="text-sm block">Loại tiền mặc định<select class="inp mt-1 bg-white"><option>USD</option><option>KHR</option><option>VND</option><option>LAK</option></select></label>
+          <label class="text-sm block">Tỷ giá KHR/USD theo kỳ<input class="inp mt-1 font-mono" value="4,026" /></label>
+          <label class="text-sm block">Formula version<input class="inp mt-1 font-mono" value="VP-2026.01" /></label>
+        </div>
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3 pt-2">Tùy chọn</h2>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between"><div><p class="font-medium text-slate-800">Khóa bảng lương sau duyệt</p><p class="text-xs text-slate-500">Không cho sửa sau khi TGĐ duyệt</p></div><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="flex items-center justify-between"><div><p class="font-medium text-slate-800">Version hóa công thức và tham số</p><p class="text-xs text-slate-500">Thay đổi rule tạo version mới, không sửa trực tiếp kỳ đã khóa</p></div><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="flex items-center justify-between"><div><p class="font-medium text-slate-800">Tự động trừ tạm ứng</p><p class="text-xs text-slate-500">Lấy từ đề nghị tạm ứng đã duyệt</p></div><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- Kỳ lương -->
+      <div id="pane-payroll" class="config-pane hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3">Cấu hình kỳ lương</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="text-sm block">Ngày bắt đầu kỳ<select class="inp mt-1 bg-white"><option>Ngày 1 hàng tháng</option><option>Ngày 26 tháng trước</option></select></label>
+          <label class="text-sm block">Ngày kết thúc kỳ<select class="inp mt-1 bg-white"><option>Ngày cuối tháng</option><option>Ngày 25</option></select></label>
+          <label class="text-sm block">Số đợt chi mặc định<select class="inp mt-1 bg-white"><option>1 đợt</option><option>2 đợt (giai đoạn 2)</option></select></label>
+          <label class="text-sm block">Ngày chi lương<input type="number" class="inp mt-1" value="10" min="1" max="28" /></label>
+          <label class="text-sm block">Ngày công chuẩn<input type="number" class="inp mt-1" value="26" min="1" max="31" /></label>
+          <label class="text-sm block">Làm tròn lương<select class="inp mt-1 bg-white"><option>USD 2 decimals</option><option>KHR whole number</option></select></label>
+        </div>
+      </div>
+
+      <!-- Thông báo -->
+      <div id="pane-notify" class="config-pane hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3">Cảnh báo tự động</h2>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="text-sm">Thiếu thông tin TK ngân hàng trước chi lương</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+            <span id="notify-unapproved" class="text-sm">Bảng lương chưa duyệt quá hạn</span>
+            <label class="switch">
+              <input type="checkbox" checked aria-labelledby="notify-unapproved">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="text-sm">Sắp đến hạn nộp NSSF / PIT</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <label class="text-sm block">Nhắc trước (ngày)<input type="number" class="inp mt-1 max-w-xs" value="3" /></label>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div id="pane-email" class="config-pane hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3">Gửi phiếu lương</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="text-sm block">SMTP Server<input class="inp mt-1" value="smtp.mekong.vn" /></label>
+          <label class="text-sm block">Cổng<input class="inp mt-1" value="587" /></label>
+          <label class="text-sm block">Email gửi<input class="inp mt-1" value="payroll@mekong.vn" /></label>
+          <label class="text-sm block">Tên hiển thị<input class="inp mt-1" value="Mekong Payroll" /></label>
+        </div>
+        <div class="flex items-center justify-between pt-2"><span class="text-sm">Tự động gửi phiếu lương sau duyệt</span><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+        <button class="text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Gửi email thử</button>
+      </div>
+
+      <!-- Tích hợp -->
+      <div id="pane-integrate" class="config-pane hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+        <h2 class="font-bold text-slate-800 border-b border-slate-100 pb-3">Kết nối hệ thống</h2>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50 rounded-xl">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-database text-brand text-xl"></i>
+              <div><p class="font-semibold">HRMS (CSDL chung)</p><p class="text-xs text-slate-500">Đọc hồ sơ NV, nghỉ phép, biến động lương</p></div></div>
+            <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">Đã kết nối</span></div>
+          <div class="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-fingerprint text-slate-500 text-xl"></i>
+              <div><p class="font-semibold">Máy chấm công</p><p class="text-xs text-slate-500">Import công qua API / file</p></div></div>
+            <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">Đã kết nối</span></div>
+          <div class="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-building-columns text-slate-500 text-xl"></i>
+              <div><p class="font-semibold">Internet Banking</p><p class="text-xs text-slate-500">Xuất file chuyển lương</p></div></div>
+            <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full">Thủ công</span></div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button id="btn-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-6 py-2.5 rounded-lg"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.onclick=()=>{
+      document.querySelectorAll('.nav-item').forEach(x=>{ x.classList.remove('active'); x.classList.add('text-slate-600'); });
+      n.classList.add('active'); n.classList.remove('text-slate-600');
+      document.querySelectorAll('.config-pane').forEach(p=> p.classList.add('hidden'));
+      document.getElementById('pane-'+n.dataset.pane).classList.remove('hidden');
+    };
+  });
+  document.getElementById('btn-save').onclick=()=> alert('Đã lưu cấu hình hệ thống.');
+})();
+</script>
+</body>
+</html>

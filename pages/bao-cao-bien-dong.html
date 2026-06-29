@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Báo cáo biến động lương - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script src="payroll-store.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>.inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; } .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; } .num{ font-variant-numeric:tabular-nums; }</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-change-report" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Báo cáo biến động lương</h1>
+      <p class="text-sm text-slate-500 mt-1">Theo dõi tăng/giảm lương, nâng bậc, thay đổi phụ cấp — USD là tiền tệ chính.</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <select id="f-from" class="inp bg-white text-sm" aria-label="Từ kỳ"></select>
+      <span class="text-slate-400">→</span>
+      <select id="f-to" class="inp bg-white text-sm" aria-label="Đến kỳ"></select>
+      <button id="btn-export" type="button" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+    </div>
+  </div>
+
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    Dữ liệu biến động đồng bộ từ <b>HRMS</b> (nâng bậc, điều chỉnh lương, thay đổi phụ cấp). Hệ thống tiền lương chỉ đọc.
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100">
+      <p class="text-sm text-slate-500 font-medium">Tăng lương</p><h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="s-up">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-red-100">
+      <p class="text-sm text-slate-500 font-medium">Giảm lương</p><h3 class="text-2xl font-extrabold text-red-500 mt-1" id="s-down">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
+      <p class="text-sm text-slate-500 font-medium">Nâng bậc</p><h3 class="text-2xl font-extrabold text-blue-600 mt-1" id="s-grade">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tuyển mới</p><h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="s-new">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Chênh lệch quỹ</p><h3 class="text-xl font-extrabold text-brand mt-1 num" id="s-diff">+0 USD</h3></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[180px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+        </div>
+        <select id="f-type" class="inp bg-white text-sm" aria-label="Loại biến động">
+          <option value="">Tất cả loại</option>
+          <option value="up">Tăng lương</option>
+          <option value="down">Giảm lương</option>
+          <option value="grade">Nâng bậc</option>
+          <option value="new">Tuyển mới</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-600 font-medium sticky top-0">
+            <tr>
+              <th class="px-4 py-3">Nhân viên</th>
+              <th class="px-4 py-3">Loại</th>
+              <th class="px-4 py-3">Ngày hiệu lực</th>
+              <th class="px-4 py-3 text-right">Trước (USD)</th>
+              <th class="px-4 py-3 text-right">Sau (USD)</th>
+              <th class="px-4 py-3 text-right">Chênh lệch</th>
+              <th class="px-4 py-3">Lý do</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <h2 class="font-bold text-slate-800 mb-4">Phân loại biến động</h2>
+      <div class="h-56"><canvas id="chart-type"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  const STORE = window.MKC_STORE;
+  const fmt = STORE.fmt.currency;
+
+  const TYPE_MAP = {
+    up: ['Tăng lương', 'bg-emerald-100 text-emerald-700'],
+    down: ['Giảm lương', 'bg-red-100 text-red-600'],
+    grade: ['Nâng bậc', 'bg-blue-100 text-blue-700'],
+    new: ['Tuyển mới', 'bg-slate-100 text-slate-700']
+  };
+
+  // Seed data dựa trên config
+  const employees = STORE.employee.getAll();
+
+  // Mock biến động data (trong thực tế sẽ từ HRMS)
+  let CHANGE_DATA = STORE.storage.get('salary_changes', null);
+
+  if (!CHANGE_DATA) {
+    CHANGE_DATA = [
+      { code: 'VP021', name: 'Sok Dara', dept: 'TCKT', type: 'new', date: '01/01/2026', before: 0, after: 620, reason: 'Tuyển mới NV Campuchia' },
+      { code: 'VP001', name: 'Đỗ Quốc Tuấn', dept: 'Ban Giám đốc', type: 'up', date: '01/01/2026', before: 1500, after: 1580, reason: 'Nâng lương định kỳ năm mới' },
+      { code: 'VP010', name: 'Trần Thị Mỹ Hạnh', dept: 'TCHC', type: 'grade', date: '15/12/2025', before: 750, after: 780, reason: 'Nâng bậc NV hành chính → NV chính' },
+      { code: 'VP033', name: 'Lê Minh Kha', dept: 'QLCL', type: 'down', date: '01/01/2026', before: 550, after: 520, reason: 'Điều chỉnh theo KPI tháng 12' },
+      { code: 'VP002', name: 'Nguyễn Văn Toàn', dept: 'Ban Giám đốc', type: 'up', date: '01/12/2025', before: 1300, after: 1380, reason: 'Thay đổi phụ cấp chức vụ' }
+    ];
+    STORE.storage.set('salary_changes', CHANGE_DATA);
+  }
+
+  // Init period selectors
+  function initPeriodSelectors() {
+    const periods = ['12/2025', '01/2026', '02/2026', '03/2026', '04/2026', '05/2026'];
+    const fromSel = document.getElementById('f-from');
+    const toSel = document.getElementById('f-to');
+
+    periods.forEach((p, i) => {
+      const opt1 = document.createElement('option');
+      opt1.value = p;
+      opt1.textContent = 'T' + p;
+      if (i === 0) opt1.selected = true;
+      fromSel.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = p;
+      opt2.textContent = 'T' + p;
+      if (i === periods.length - 1) opt2.selected = true;
+      toSel.appendChild(opt2);
+    });
+
+    fromSel.onchange = render;
+    toSel.onchange = render;
+  }
+
+  // Render table
+  function render() {
+    const q = document.getElementById('f-search').value.trim().toLowerCase();
+    const tp = document.getElementById('f-type').value;
+    const rows = CHANGE_DATA.filter(d =>
+      (!q || d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q)) &&
+      (!tp || d.type === tp)
+    );
+
+    document.getElementById('tbl-body').innerHTML = rows.map(d => {
+      const [label, cls] = TYPE_MAP[d.type];
+      const diff = d.after - d.before;
+      const diffCls = diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-slate-400';
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-2.5"><p class="font-semibold">${d.name}</p><p class="text-xs text-slate-400">${d.code} · ${d.dept}</p></td>
+        <td class="px-4 py-2.5"><span class="text-xs font-bold px-2 py-1 rounded-full ${cls}">${label}</span></td>
+        <td class="px-4 py-2.5">${d.date}</td>
+        <td class="px-4 py-2.5 text-right num">${d.before ? fmt(d.before) : '—'}</td>
+        <td class="px-4 py-2.5 text-right num font-semibold">${fmt(d.after)}</td>
+        <td class="px-4 py-2.5 text-right num font-bold ${diffCls}">${diff > 0 ? '+' : ''}${fmt(diff)}</td>
+        <td class="px-4 py-2.5 text-slate-500 text-xs max-w-[160px]">${d.reason}</td>
+      </tr>`;
+    }).join('');
+
+    // Stats
+    const upCount = CHANGE_DATA.filter(d => d.type === 'up').length;
+    const downCount = CHANGE_DATA.filter(d => d.type === 'down').length;
+    const gradeCount = CHANGE_DATA.filter(d => d.type === 'grade').length;
+    const newCount = CHANGE_DATA.filter(d => d.type === 'new').length;
+    const totalDiff = CHANGE_DATA.reduce((a, d) => a + (d.after - d.before), 0);
+
+    document.getElementById('s-up').textContent = upCount;
+    document.getElementById('s-down').textContent = downCount;
+    document.getElementById('s-grade').textContent = gradeCount;
+    document.getElementById('s-new').textContent = newCount;
+    document.getElementById('s-diff').textContent = (totalDiff >= 0 ? '+' : '') + fmt(totalDiff);
+
+    // Update chart
+    updateChart(upCount, downCount, gradeCount, newCount);
+  }
+
+  // Chart
+  let chart = null;
+  function updateChart(up, down, grade, newC) {
+    const ctx = document.getElementById('chart-type');
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['Tăng lương', 'Giảm lương', 'Nâng bậc', 'Tuyển mới'],
+        datasets: [{
+          data: [up, down, grade, newC],
+          backgroundColor: ['#10b981', '#ef4444', '#3b82f6', '#64748b']
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        maintainAspectRatio: false
+      }
+    });
+  }
+
+  // Export
+  document.getElementById('btn-export').onclick = () => {
+    alert('Đã xuất file Excel báo cáo biến động lương.');
+  };
+
+  // Search
+  document.getElementById('f-search').oninput = render;
+  document.getElementById('f-type').onchange = render;
+
+  // Init
+  initPeriodSelectors();
+  render();
+})();
+</script>
+</body>
+</html>

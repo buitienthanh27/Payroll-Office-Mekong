@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bảng chấm công tháng - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .cc-table th, .cc-table td { border:1px solid #e2e8f0; }
+  .cc-table td.day { width:30px; min-width:30px; text-align:center; font-size:12px; font-weight:600; }
+  .cc-wrap::-webkit-scrollbar { height:8px; } .cc-wrap::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+</style>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-timesheet"> và <script> cuối -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-timesheet" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Tiêu đề + hành động -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Bảng chấm công tháng</h1>
+      <p class="text-sm text-slate-500 mt-1">Khối văn phòng · Kỳ <span id="period-label" class="font-semibold text-slate-700">Tháng 01/2026</span></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-fingerprint"></i> Đồng bộ máy vân tay
+      </button>
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-file-import"></i> Import từ phần mềm
+      </button>
+      <button class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-file-excel"></i> Xuất Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- Ghi chú nguồn dữ liệu -->
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    Dữ liệu chấm công được <b>nhập từ phần mềm chấm công / máy vân tay</b> — không nhập tay tại đây.
+    Lần đồng bộ gần nhất: <b>06:00 ngày 19/06/2026</b> (nguồn: Máy vân tay VP-Tầng 2).
+  </div>
+
+  <!-- Thẻ thống kê -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Ngày công chuẩn</p><h3 id="stat-standard" class="text-2xl font-extrabold text-slate-800 mt-1">26</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Công thực tế (BQ)</p><h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="stat-avg">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Lượt đi muộn</p><h3 class="text-2xl font-extrabold text-amber-500 mt-1" id="stat-late">2</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Lượt nghỉ phép</p><h3 class="text-2xl font-extrabold text-blue-500 mt-1" id="stat-leave">0</h3></div>
+  </div>
+
+  <!-- Bộ lọc -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-3">
+    <select id="f-month" aria-label="Chọn tháng" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+      <option>Tháng 01/2026</option><option>Tháng 12/2025</option><option>Tháng 11/2025</option>
+    </select>
+    <select id="f-dept" aria-label="Chọn phòng ban" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+      <option value="">Tất cả phòng ban</option>
+    </select>
+    <div class="relative flex-1 min-w-[200px]">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+      <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+    </div>
+    <!-- OQ-020: Ký hiệu chấm công chuẩn -->
+    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 ml-auto">
+      <span><b class="text-emerald-600">X</b> Công ngày</span>
+      <span><b class="text-red-400">Ro</b> Việc riêng</span>
+      <span><b class="text-blue-500">PN</b> Phép năm</span>
+      <span><b class="text-purple-500">CT</b> Công tác</span>
+      <span><b class="text-amber-500">R</b> Lễ/Tết</span>
+      <span><b class="text-orange-500">R1</b> Trực Lễ</span>
+      <span><b class="text-cyan-500">H</b> Học tập</span>
+      <span><b class="text-rose-500">O</b> Nghỉ ốm</span>
+    </div>
+  </div>
+
+  <!-- Bảng chấm công -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="cc-wrap overflow-x-auto">
+      <table class="cc-table w-full border-collapse text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr id="head-row">
+            <th class="px-3 py-2 text-left sticky left-0 bg-slate-50 z-10 min-w-[200px]">Nhân viên</th>
+          </tr>
+        </thead>
+        <tbody id="cc-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  if (!CFG) return;
+
+  const YEAR = 2026, MONTH = 1; // Đồng bộ kỳ tháng 1/2026 của config
+  const lastDay = new Date(YEAR, MONTH, 0).getDate();
+  const dow = (d) => new Date(YEAR, MONTH-1, d).getDay(); // 0 CN .. 6 T7
+  const isWeekend = (d) => { const w=dow(d); return w===0||w===6; };
+
+  // Ngày lễ tháng 1 (ví dụ ngày 1/1)
+  const HOLIDAYS = { 1: true };
+
+  // Nạp danh sách nhân viên từ config
+  const EMP = CFG.payrollRows.map(row => ({
+    code: row.code,
+    name: row.name,
+    department: row.department,
+    actualDays: row.actualDays || 26,
+    leaveDays: row.leaveDays || 0,
+    holidayDays: row.holidayDays || 0
+  }));
+
+  // Định nghĩa màu sắc CSS theo ký hiệu chấm công
+  const STYLE = {
+    'X':'text-emerald-600 font-medium',           // Công ngày
+    'Ro':'text-red-400 bg-red-50 font-bold',    // Việc riêng
+    'PN':'text-blue-500 bg-blue-50 font-bold',  // Phép năm
+    'CT':'text-purple-500 bg-purple-50 font-bold', // Công tác
+    'R':'text-amber-500 bg-amber-50 font-bold', // Lễ/Tết
+    'R1':'text-orange-500 bg-orange-50 font-bold', // Trực Lễ/Tết
+    'H':'text-cyan-500 bg-cyan-50 font-medium',   // Học tập
+    'O':'text-rose-500 bg-rose-50 font-bold',   // Nghỉ ốm
+    '':'text-slate-300'               // Cuối tuần
+  };
+  const WDAY = ['CN','T2','T3','T4','T5','T6','T7'];
+
+  const $ = (id) => document.getElementById(id);
+  const head = $('head-row'), body = $('cc-body'), fDept = $('f-dept'), fSearch = $('f-search');
+
+  // Cập nhật tiêu đề kỳ
+  $('period-label').textContent = CFG.period.label;
+  $('stat-standard').textContent = CFG.period.standardWorkDays;
+
+  // Render header ngày
+  let dayCols = '';
+  for(let d=1; d<=lastDay; d++){
+    const we = isWeekend(d) || HOLIDAYS[d];
+    dayCols += `<th class="day px-0 py-1 ${we?'bg-slate-100 text-slate-400':''}">${d}<br><span class="text-[10px] font-normal">${WDAY[dow(d)]}</span></th>`;
+  }
+  const sumCols = `<th class="px-2 py-2 text-center bg-emerald-50 text-emerald-700">Công</th>
+    <th class="px-2 py-2 text-center" title="R + R1">Lễ/Tết</th>
+    <th class="px-2 py-2 text-center" title="PN">Phép</th>
+    <th class="px-2 py-2 text-center" title="CT">C.Tác</th>
+    <th class="px-2 py-2 text-center" title="Ro + O">K.Lương</th>`;
+  head.insertAdjacentHTML('beforeend', dayCols + sumCols);
+
+  // Đổ danh sách phòng ban vào filter
+  const depts = [...new Set(EMP.map(e => e.department))];
+  fDept.innerHTML = '<option value="">Tất cả phòng ban</option>';
+  depts.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = d;
+    fDept.appendChild(o);
+  });
+
+  // Thuật toán sinh ký hiệu chấm công động cho từng nhân viên đảm bảo khớp với số liệu tổng hợp
+  function generateAttendance(employee) {
+    const att = {};
+    const actual = employee.actualDays;
+    const leave = employee.leaveDays;
+    
+    // Thu thập các ngày trong tuần (loại trừ ngày nghỉ lễ 1/1 và cuối tuần)
+    const weekdays = [];
+    for (let d = 1; d <= lastDay; d++) {
+      if (HOLIDAYS[d]) {
+        att[d] = 'R';
+      } else if (isWeekend(d)) {
+        att[d] = '';
+      } else {
+        weekdays.push(d);
+        att[d] = 'X'; // Mặc định là công thường
+      }
+    }
+
+    // weekdays thường có 22 ngày. 
+    // Số ngày nghỉ không lương (không phép):
+    let unpaid = weekdays.length - actual - leave;
+    if (unpaid < 0) unpaid = 0;
+
+    let leaveAllocated = 0;
+    let unpaidAllocated = 0;
+    
+    // Giả lập 1 ngày công tác cho các quản lý/kế toán trưởng
+    const isManager = ['VP001', 'VP002', 'VP021'].includes(employee.code);
+    const ctNeeded = isManager ? 1 : 0;
+    let ctAllocated = 0;
+
+    // Trộn ngẫu nhiên danh sách các ngày đi làm để phân bổ phép/nghỉ
+    // Sử dụng mã nhân viên làm seed đơn giản để vị trí không thay đổi mỗi lần render
+    let seed = 0;
+    for (let c = 0; c < employee.code.length; c++) {
+      seed += employee.code.charCodeAt(c);
+    }
+    const pseudoRandom = () => {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    weekdays.sort(() => pseudoRandom() - 0.5);
+
+    weekdays.forEach(d => {
+      if (leaveAllocated < leave) {
+        att[d] = 'PN';
+        leaveAllocated++;
+      } else if (unpaidAllocated < unpaid) {
+        att[d] = 'Ro';
+        unpaidAllocated++;
+      } else if (ctAllocated < ctNeeded) {
+        att[d] = 'CT';
+        ctAllocated++;
+      }
+    });
+
+    return att;
+  }
+
+  // Chuyển tiếp sang hồ sơ chi tiết khi click nhân sự
+  window.viewProfile = (code) => {
+    localStorage.setItem('selected_emp_code', code);
+    window.location.href = 'ho-so-chi-tiet-nhan-vien.html';
+  };
+
+  function render(){
+    const q = fSearch.value.trim().toLowerCase(), dep = fDept.value;
+    let totWork = 0, totLeave = 0, n = 0;
+    const rows = EMP.filter(e => (!q || e.code.toLowerCase().includes(q) || e.name.toLowerCase().includes(q)) && (!dep || e.department === dep));
+
+    body.innerHTML = rows.map(e => {
+      let work = 0, leave = 0, ct = 0, unpaid = 0, holiday = 0, cells = '';
+      const att = generateAttendance(e);
+
+      for(let d=1; d<=lastDay; d++){
+        const c = att[d];
+        if(['X','PN','CT','R','R1','H'].includes(c)) work++;
+        if(c==='PN') leave++;
+        if(c==='CT') ct++;
+        if(['R','R1'].includes(c)) holiday++;
+        if(['Ro','O'].includes(c)) unpaid++;
+        const we = isWeekend(d) || HOLIDAYS[d];
+        cells += `<td class="day ${STYLE[c]||''} ${we&&c===''?'bg-slate-50':''}">${c||'·'}</td>`;
+      }
+      
+      totWork += e.actualDays + e.holidayDays; // Tổng công quy đổi thực tế
+      totLeave += e.leaveDays;
+      n++;
+
+      return `<tr class="hover:bg-slate-50/60 transition-colors">
+        <td class="px-3 py-2.5 sticky left-0 bg-white z-10 hover:bg-slate-100/80 cursor-pointer transition-colors" onclick="viewProfile('${e.code}')">
+          <p class="font-semibold text-slate-800 hover:text-brand transition-colors flex items-center gap-1">${e.name} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i></p>
+          <p class="text-xs text-slate-400 font-mono">${e.code} · ${e.department}</p>
+        </td>
+        ${cells}
+        <td class="day bg-emerald-50 font-bold text-emerald-700">${e.actualDays}</td>
+        <td class="day ${e.holidayDays?'text-amber-600 font-bold':'text-slate-300'}">${e.holidayDays||'·'}</td>
+        <td class="day ${e.leaveDays?'text-blue-600 font-bold':'text-slate-300'}">${e.leaveDays||'·'}</td>
+        <td class="day ${ct?'text-purple-600 font-bold':'text-slate-300'}">${ct||'·'}</td>
+        <td class="day ${unpaid?'text-red-600 font-bold':'text-slate-300'}">${unpaid||'·'}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="${lastDay+6}" class="px-4 py-10 text-center text-slate-400">Không có nhân viên phù hợp.</td></tr>`;
+
+    // Tính toán KPI Thống kê
+    const avgWork = n ? (totWork / n).toFixed(1) : '0';
+    $('stat-avg').textContent = avgWork;
+    $('stat-leave').textContent = totLeave;
+    $('stat-late').textContent = Math.round(n * 0.4); // Giả lập tỷ lệ đi muộn thấp
+  }
+
+  [fSearch, fDept].forEach(el => el.addEventListener('input', render));
+  render();
+})();
+</script>
+</body>
+</html>

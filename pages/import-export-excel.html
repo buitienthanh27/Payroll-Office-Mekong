@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Import / Export Excel - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script src="payroll-store.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .dropzone{ border:2px dashed #cbd5e1; transition:all .15s; }
+  .dropzone:hover,.dropzone.drag{ border-color:#10b981; background:#ecfdf5; }
+  .tab-btn.active{ border-bottom:2px solid #10b981; color:#10b981; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-import-export" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Import / Export Excel</h1>
+    <p class="text-sm text-slate-500 mt-1">Nhập/xuất workbook VP: BCC, THANH TOAN, PHAN TOAN, TONG HOP, gia cảnh, Điện.</p>
+  </div>
+
+  <div class="flex border-b border-slate-200 gap-1">
+    <button class="tab-btn active px-5 py-3 text-sm font-semibold" data-tab="import">Import</button>
+    <button class="tab-btn px-5 py-3 text-sm font-semibold text-slate-500" data-tab="export">Export</button>
+    <button class="tab-btn px-5 py-3 text-sm font-semibold text-slate-500" data-tab="history">Lịch sử</button>
+  </div>
+
+  <!-- IMPORT -->
+  <div id="pane-import" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="import-card bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:border-brand hover:shadow-md transition-all" data-type="chamcong">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand flex items-center justify-center mb-3"><i class="fa-solid fa-calendar-check"></i></div>
+        <h3 class="font-bold text-slate-800">BCC</h3>
+        <p class="text-xs text-slate-500 mt-1">Import ký hiệu x/Ro/R1, ngày lễ, nghỉ phép</p>
+      </div>
+      <div class="import-card bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:border-brand hover:shadow-md transition-all" data-type="khautru">
+        <div class="w-10 h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center mb-3"><i class="fa-solid fa-minus-circle"></i></div>
+        <h3 class="font-bold text-slate-800">Khấu trừ / Điện</h3>
+        <p class="text-xs text-slate-500 mt-1">Import T/U/V/Z/AA/AB/AC/AJ và sheet Điện</p>
+      </div>
+      <div class="import-card bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:border-brand hover:shadow-md transition-all" data-type="kpi">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-3"><i class="fa-solid fa-star"></i></div>
+        <h3 class="font-bold text-slate-800">Workbook VP</h3>
+        <p class="text-xs text-slate-500 mt-1">Import/đối soát THANH TOAN, PHAN TOAN, TONG HOP</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <h2 class="font-bold text-slate-800 mb-4" id="import-title">Import — Bảng chấm công</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <label class="text-sm block">Kỳ áp dụng<select class="inp w-full mt-1 bg-white"><option>Tháng 01/2026</option></select></label>
+        <label class="text-sm block">Mẫu file<a href="#" class="block mt-1 text-brand text-sm hover:underline"><i class="fa-solid fa-download"></i> Tải mẫu Excel</a></label>
+      </div>
+      <div id="dropzone" class="dropzone rounded-xl p-10 text-center cursor-pointer">
+        <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 mb-3"></i>
+        <p class="font-semibold text-slate-700">Kéo thả file Excel vào đây</p>
+        <p class="text-sm text-slate-400 mt-1">hoặc <span class="text-brand">chọn file</span> (.xlsx, .xls — tối đa 10MB)</p>
+        <input type="file" id="file-inp" accept=".xlsx,.xls" class="hidden" title="Chọn file Excel" aria-label="Chọn file Excel" />
+      </div>
+      <div id="file-info" class="hidden mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+        <div class="flex items-center gap-3"><i class="fa-solid fa-file-excel text-emerald-600 text-2xl"></i>
+          <div><p class="font-semibold text-slate-800" id="file-name">—</p><p class="text-xs text-slate-500" id="file-size">—</p></div></div>
+        <button id="btn-import" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div id="pane-export" class="hidden space-y-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr><th class="px-4 py-3">Loại dữ liệu</th><th class="px-4 py-3">Mô tả</th><th class="px-4 py-3">Kỳ</th><th class="px-4 py-3 text-center">Tải mẫu</th><th class="px-4 py-3 text-center">Xuất</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold">THANH TOAN</td><td class="px-4 py-3 text-slate-500">Bảng lương chi tiết C-AL, USD/KHR</td>
+            <td class="px-4 py-3"><select class="inp bg-white text-xs" title="Chọn kỳ" aria-label="Chọn kỳ"><option>T01/2026</option></select></td>
+            <td class="px-4 py-3 text-center"><button type="button" class="text-brand" aria-label="Tải mẫu" title="Tải mẫu"><i class="fa-solid fa-download"></i></button></td>
+            <td class="px-4 py-3 text-center"><button class="btn-export text-sm bg-brand text-white px-3 py-1.5 rounded-lg">Excel</button></td></tr>
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold">BCC</td><td class="px-4 py-3 text-slate-500">Chấm công x/Ro/R1, nghỉ theo tháng</td>
+            <td class="px-4 py-3"><select class="inp bg-white text-xs" title="Chọn kỳ" aria-label="Chọn kỳ"><option>T01/2026</option></select></td>
+            <td class="px-4 py-3 text-center"><button type="button" class="text-brand" aria-label="Tải mẫu" title="Tải mẫu"><i class="fa-solid fa-download"></i></button></td>
+            <td class="px-4 py-3 text-center"><button class="btn-export text-sm bg-brand text-white px-3 py-1.5 rounded-lg">Excel</button></td></tr>
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold">Danh sách nhân viên</td><td class="px-4 py-3 text-slate-500">Hồ sơ lương, TK ngân hàng</td>
+            <td class="px-4 py-3">—</td>
+            <td class="px-4 py-3 text-center"><button type="button" class="text-brand" aria-label="Tải mẫu" title="Tải mẫu"><i class="fa-solid fa-download"></i></button></td>
+            <td class="px-4 py-3 text-center"><button class="btn-export text-sm bg-brand text-white px-3 py-1.5 rounded-lg">Excel</button></td></tr>
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold">NSSF / PIT / Điện</td><td class="px-4 py-3 text-slate-500">NSSF, PIT Campuchia, gia cảnh, tiền điện</td>
+            <td class="px-4 py-3"><select class="inp bg-white text-xs" title="Chọn kỳ" aria-label="Chọn kỳ"><option>T01/2026</option></select></td>
+            <td class="px-4 py-3 text-center"><button type="button" class="text-brand" aria-label="Tải mẫu" title="Tải mẫu"><i class="fa-solid fa-download"></i></button></td>
+            <td class="px-4 py-3 text-center"><button class="btn-export text-sm bg-brand text-white px-3 py-1.5 rounded-lg">Excel</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="pane-history" class="hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr><th class="px-4 py-3">Thời gian</th><th class="px-4 py-3">Loại</th><th class="px-4 py-3">Hướng</th>
+          <th class="px-4 py-3">File</th><th class="px-4 py-3 text-center">Dòng</th><th class="px-4 py-3">Trạng thái</th><th class="px-4 py-3">Người thực hiện</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3">18/06/2026 08:30</td><td class="px-4 py-3">Chấm công</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Import</span></td>
+            <td class="px-4 py-3">VP_BCC_T01_2026.xlsx</td><td class="px-4 py-3 text-center">38</td>
+            <td class="px-4 py-3"><span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check"></i> Thành công</span></td>
+            <td class="px-4 py-3">Nguyễn Thị Lan</td></tr>
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3">15/06/2026 14:00</td><td class="px-4 py-3">Bảng lương</td>
+            <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded">Export</span></td>
+            <td class="px-4 py-3">bangluong_T04.xlsx</td><td class="px-4 py-3 text-center">8</td>
+            <td class="px-4 py-3"><span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check"></i> Thành công</span></td>
+            <td class="px-4 py-3">Trần Văn Đức</td></tr>
+          <tr class="hover:bg-slate-50"><td class="px-4 py-3">10/06/2026 09:15</td><td class="px-4 py-3">Khấu trừ</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Import</span></td>
+            <td class="px-4 py-3">VP_Dien_T01_2026.xlsx</td><td class="px-4 py-3 text-center">28</td>
+            <td class="px-4 py-3"><span class="text-red-500 font-semibold"><i class="fa-solid fa-circle-xmark"></i> 2 lỗi</span></td>
+            <td class="px-4 py-3">Nguyễn Thị Lan</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const titles={ chamcong:'Import - BCC', khautru:'Import - Khấu trừ / Điện', kpi:'Import - Workbook VP' };
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>{ b.classList.remove('active','text-brand'); b.classList.add('text-slate-500'); });
+      btn.classList.add('active'); btn.classList.remove('text-slate-500');
+      ['import','export','history'].forEach(p=> document.getElementById('pane-'+p).classList.toggle('hidden', btn.dataset.tab!==p));
+    };
+  });
+  document.querySelectorAll('.import-card').forEach(c=>{
+    c.onclick=()=>{
+      document.querySelectorAll('.import-card').forEach(x=> x.classList.remove('border-brand','ring-2','ring-brand/20'));
+      c.classList.add('border-brand','ring-2','ring-brand/20');
+      document.getElementById('import-title').textContent=titles[c.dataset.type];
+    };
+  });
+  const dz=document.getElementById('dropzone'), fi=document.getElementById('file-inp');
+  dz.onclick=()=> fi.click();
+  fi.onchange=()=> showFile(fi.files[0]);
+  dz.ondragover=e=>{ e.preventDefault(); dz.classList.add('drag'); };
+  dz.ondragleave=()=> dz.classList.remove('drag');
+  dz.ondrop=e=>{ e.preventDefault(); dz.classList.remove('drag'); if(e.dataTransfer.files[0]) showFile(e.dataTransfer.files[0]); };
+  function showFile(f){
+    if(!f) return;
+    document.getElementById('file-info').classList.remove('hidden');
+    document.getElementById('file-name').textContent=f.name;
+    document.getElementById('file-size').textContent=(f.size/1024).toFixed(1)+' KB';
+  }
+  document.getElementById('btn-import').onclick=()=> alert('Import thành công — 248 dòng hợp lệ.');
+  document.querySelectorAll('.btn-export').forEach(b=> b.onclick=()=> alert('Đã xuất file Excel.'));
+})();
+</script>
+</body>
+</html>

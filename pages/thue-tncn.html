@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Thuế TNCN Campuchia - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .num{ font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-tax" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Thuế TNCN Campuchia</h1>
+      <p class="text-sm text-slate-500 mt-1">Tính PIT theo biểu 5 bậc Campuchia, quy đổi KHR/USD theo tỷ giá kỳ lương.</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <select id="f-country" class="inp bg-white text-sm" aria-label="Chọn quốc gia" title="Chọn quốc gia">
+        <option value="KH">Campuchia</option><option value="VN">Việt Nam</option><option value="LA">Lào</option>
+      </select>
+      <select id="f-ky" class="inp bg-white text-sm" aria-label="Chọn kỳ" title="Chọn kỳ"><option>Tháng 01/2026</option><option>Tháng 02/2026</option></select>
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button id="btn-calc" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Tính lại thuế</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Gross chịu thuế</p><h3 class="text-xl font-extrabold text-slate-800 mt-1 num" id="s-income">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Giảm trừ gia cảnh</p><h3 class="text-xl font-extrabold text-slate-700 mt-1 num" id="s-deduct">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">TN tính thuế KHR</p><h3 class="text-xl font-extrabold text-brand mt-1 num" id="s-taxable">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-red-100">
+      <p class="text-sm text-slate-500 font-medium">Tổng thuế TNCN</p><h3 class="text-xl font-extrabold text-red-500 mt-1 num" id="s-tax">0</h3></div>
+  </div>
+
+  <!-- Biểu thuế lũy tiến Campuchia -->
+  <div id="bracket-vn" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+    <h2 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-table-list text-brand"></i> Biểu thuế TNCN Campuchia</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600"><tr><th class="px-3 py-2 text-left">Bậc</th><th class="px-3 py-2 text-left">Thu nhập tính thuế / tháng</th><th class="px-3 py-2 text-center">Thuế suất</th><th class="px-3 py-2 text-right">Fixed deduction</th></tr></thead>
+        <tbody class="divide-y divide-slate-100 text-slate-700">
+          <tr><td class="px-3 py-2">1</td><td class="px-3 py-2">0 - 1,500,000 KHR</td><td class="px-3 py-2 text-center font-semibold">0%</td><td class="px-3 py-2 text-right">0</td></tr>
+          <tr><td class="px-3 py-2">2</td><td class="px-3 py-2">1,500,001 - 2,000,000 KHR</td><td class="px-3 py-2 text-center font-semibold">5%</td><td class="px-3 py-2 text-right">75,000</td></tr>
+          <tr><td class="px-3 py-2">3</td><td class="px-3 py-2">2,000,001 - 8,500,000 KHR</td><td class="px-3 py-2 text-center font-semibold">10%</td><td class="px-3 py-2 text-right">175,000</td></tr>
+          <tr><td class="px-3 py-2">4</td><td class="px-3 py-2">8,500,001 - 12,500,000 KHR</td><td class="px-3 py-2 text-center font-semibold">15%</td><td class="px-3 py-2 text-right">600,000</td></tr>
+          <tr><td class="px-3 py-2">5</td><td class="px-3 py-2">Trên 12,500,000 KHR</td><td class="px-3 py-2 text-center font-semibold">20%</td><td class="px-3 py-2 text-right">1,225,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+      <p class="text-xs text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i><b>OQ-006:</b> Campuchia không có "giảm trừ bản thân" như VN. Ngưỡng 0% đến 1.5M KHR là miễn thuế bậc đầu (FixedBracketDeduction).</p>
+      <p class="text-xs text-amber-700 mt-1"><b>FamilyRebate:</b> 150,000 KHR/tháng cho mỗi người phụ thuộc hoặc vợ/chồng không có thu nhập — lấy từ sheet Gia cảnh.</p>
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Tỷ giá kỳ: 1 USD = 4,026 KHR · Nguồn: NBC/GDT (OQ-009)</p>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-3">
+    <div class="relative flex-1 min-w-[200px]">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+      <input id="f-search" type="text" placeholder="Tìm nhân viên, passport..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+    </div>
+    <select id="f-dept" class="inp bg-white text-sm" aria-label="Lọc theo phòng ban"><option value="">Tất cả phòng ban</option></select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3 sticky left-0 bg-slate-50 z-10">Nhân viên</th>
+            <th class="px-3 py-3">Passport</th>
+            <th class="px-3 py-3 text-center">NPT</th>
+            <th class="px-3 py-3 text-right">Gross USD</th>
+            <th class="px-3 py-3 text-right">Trừ NSSF</th>
+            <th class="px-3 py-3 text-right">Giảm trừ KHR</th>
+            <th class="px-3 py-3 text-right bg-emerald-50">TN tính thuế</th>
+            <th class="px-3 py-3 text-right">PIT USD</th>
+            <th class="px-3 py-3 text-center">Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
+      <h3 class="font-bold text-slate-800" id="m-title">Chi tiết tính thuế</h3>
+      <button id="m-close" type="button" class="text-slate-400 hover:text-slate-600" aria-label="Đóng cửa sổ" title="Đóng cửa sổ"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="p-5 space-y-3 text-sm" id="m-body"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  const fmtUsd = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+  const fmtKHR = n => Math.round(n || 0).toLocaleString('en-US') + ' KHR';
+  // OQ-006: FamilyRebate 150,000 KHR/NPT (tách khỏi FixedBracketDeduction trong biểu thuế)
+  const familyDeductionKHR = CFG.familyDeductionConfig?.dependentDeductionKHR || 150000;
+  const DATA = CFG.payrollRows.map((r, idx) => ({
+    ...r,
+    dependents: idx === 0 ? 2 : idx === 1 ? 1 : 0
+  }));
+
+  function findBracket(taxableKHR){
+    return CFG.taxBrackets.find(b => taxableKHR >= b.from && (b.to === null || taxableKHR <= b.to)) || CFG.taxBrackets[0];
+  }
+
+  function rowCalc(d){
+    const nssf = d.nssf || 0;
+    // OQ-006: FamilyRebate = NPT × 150,000 KHR
+    const familyRebate = familyDeductionKHR * d.dependents;
+    // OQ-013: Thâm niên tách Q (không thuế) và R (chịu thuế)
+    const seniorityNonTax = d.seniorityNonTaxable || 0;
+    const seniorityTax = d.seniorityTaxable || 0;
+    // Công thức: (Tổng lương - Q - NSSF + R) × Tỷ giá - FamilyRebate
+    const taxableKHR = Math.max(0, (d.gross - seniorityNonTax - nssf + seniorityTax) * CFG.period.exchangeRate - familyRebate);
+    const bracket = findBracket(taxableKHR);
+    const calculatedTaxKHR = Math.max(0, taxableKHR * bracket.rate - bracket.deduction);
+    const calculatedTaxUSD = Math.round((calculatedTaxKHR / CFG.period.exchangeRate) * 100) / 100;
+    return { nssf, familyRebate, seniorityNonTax, seniorityTax, taxableKHR, bracket, calculatedTaxKHR, calculatedTaxUSD, tax: d.pit };
+  }
+
+  function render(){
+    const q=document.getElementById('f-search').value.trim().toLowerCase();
+    const dep=document.getElementById('f-dept').value;
+    const rows=DATA.filter(d=>
+      (!q||d.code.toLowerCase().includes(q)||d.name.toLowerCase().includes(q)||String(d.passport).toLowerCase().includes(q))&&(!dep||d.department===dep)
+    );
+
+    let tInc=0,tDed=0,tTaxable=0,tTax=0;
+
+    document.getElementById('tbl-body').innerHTML=rows.map(d=>{
+      const {nssf,familyRebate,taxableKHR,tax}=rowCalc(d);
+      tInc+=d.gross; tDed+=familyRebate; tTaxable+=taxableKHR; tTax+=tax;
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-2.5 sticky left-0 bg-white z-10"><p class="font-semibold text-slate-800">${d.name}</p><p class="text-xs text-slate-400">${d.code} · ${d.department}</p></td>
+        <td class="px-3 py-2.5 font-mono text-xs text-slate-600">${d.passport}</td>
+        <td class="px-3 py-2.5 text-center font-semibold">${d.dependents}</td>
+        <td class="px-3 py-2.5 text-right num">${fmtUsd(d.gross)}</td>
+        <td class="px-3 py-2.5 text-right num text-slate-500">${fmtUsd(nssf)}</td>
+        <td class="px-3 py-2.5 text-right num">${fmtKHR(familyRebate)}</td>
+        <td class="px-3 py-2.5 text-right num font-semibold text-brand bg-emerald-50/50">${fmtKHR(taxableKHR)}</td>
+        <td class="px-3 py-2.5 text-right num font-bold text-red-500">${fmtUsd(tax)}</td>
+        <td class="px-3 py-2.5 text-center"><button data-code="${d.code}" class="btn-detail text-brand hover:text-brand-dark"><i class="fa-solid fa-eye"></i></button></td></tr>`;
+    }).join('');
+
+    document.getElementById('s-income').textContent=fmtUsd(tInc);
+    document.getElementById('s-deduct').textContent=fmtKHR(tDed);
+    document.getElementById('s-taxable').textContent=fmtKHR(tTaxable);
+    document.getElementById('s-tax').textContent=fmtUsd(tTax);
+
+    document.querySelectorAll('.btn-detail').forEach(b=> b.onclick=()=>{
+      const d=DATA.find(x=>x.code===b.dataset.code);
+      if(!d) return;
+      const c=rowCalc(d);
+      document.getElementById('m-title').textContent='Chi tiết thuế - '+d.name;
+      document.getElementById('m-body').innerHTML=`
+        <div class="flex justify-between py-2 border-b border-slate-100"><span>Gross USD</span><span class="font-semibold num">${fmtUsd(d.gross)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100"><span>Trừ NSSF</span><span class="font-semibold num text-slate-500">- ${fmtUsd(c.nssf)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100"><span>Quy đổi KHR</span><span class="font-semibold num">${CFG.period.exchangeRate.toLocaleString('en-US')} KHR/USD</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100"><span>FamilyRebate (${d.dependents} NPT × 150K)</span><span class="font-semibold num">- ${fmtKHR(c.familyRebate)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100 text-slate-500"><span>Thâm niên không thuế (Q)</span><span class="font-semibold num">- ${fmtUsd(c.seniorityNonTax)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100 text-slate-500"><span>Thâm niên chịu thuế (R)</span><span class="font-semibold num">+ ${fmtUsd(c.seniorityTax)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100 bg-emerald-50 px-2 rounded"><span class="font-semibold">Thu nhập tính thuế</span><span class="font-bold text-brand num">${fmtKHR(c.taxableKHR)}</span></div>
+        <div class="flex justify-between py-2 border-b border-slate-100"><span>Bậc thuế</span><span class="font-semibold">${Math.round(c.bracket.rate*100)}% · trừ ${fmtKHR(c.bracket.deduction)}</span></div>
+        <div class="flex justify-between py-3"><span class="font-bold text-slate-800">PIT theo workbook/rule</span><span class="font-extrabold text-red-500 num text-lg">${fmtUsd(c.tax)}</span></div>
+        <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 p-3 rounded-xl">Giá trị tính nháp theo bracket: ${fmtUsd(c.calculatedTaxUSD)}. Khi khách chốt rounding/gia cảnh, hệ thống tạo version PIT mới.</p>`;
+      const m=document.getElementById('modal'); m.classList.remove('hidden'); m.classList.add('flex');
+    });
+  }
+
+  [...new Set(DATA.map(d=>d.department))].forEach(d=>{
+    const o=document.createElement('option'); o.value=d; o.textContent=d; document.getElementById('f-dept').appendChild(o);
+  });
+
+  const closeM=()=>{ const m=document.getElementById('modal'); m.classList.add('hidden'); m.classList.remove('flex'); };
+  document.getElementById('m-close').onclick=closeM;
+  document.getElementById('modal').onclick=e=>{ if(e.target.id==='modal') closeM(); };
+  document.getElementById('f-search').oninput=render;
+  document.getElementById('f-dept').onchange=render;
+  document.getElementById('f-country').onchange=render;
+  document.getElementById('btn-calc').onclick=()=> alert('Đã tính lại PIT kỳ 01/2026 theo version '+CFG.period.taxVersion+'.');
+  render();
+})();
+</script>
+</body>
+</html>

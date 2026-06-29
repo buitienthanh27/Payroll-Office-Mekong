@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đơn tăng ca (OT) - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>.inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; } .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }</style>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-ot"> và <script> cuối -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-ot" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Tiêu đề -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Đơn tăng ca (OT)</h1>
+      <p class="text-sm text-slate-500 mt-1">Khối văn phòng · Kỳ <span id="period-label" class="font-semibold text-slate-700">Tháng 01/2026</span></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button id="btn-new" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-plus"></i> Tạo đơn OT</button>
+    </div>
+  </div>
+
+  <!-- Ghi chú -->
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    OT phải được <b>đăng ký &amp; duyệt</b> mới được tính lương. Hệ số: Ngày thường <b>150%</b> · Chủ nhật <b>200%</b> · Lễ tết <b>300%</b>.
+  </div>
+
+  <!-- Thẻ thống kê -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-amber-400">
+      <p class="text-sm text-slate-500 font-medium">Đơn chờ duyệt</p><h3 class="text-2xl font-extrabold text-amber-500 mt-1" id="s-pending">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Đã duyệt</p><h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="s-approved">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tổng giờ OT (đã duyệt)</p><h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="s-hours">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Ước tính chi phí OT</p><h3 class="text-sm font-extrabold text-brand mt-2.5" id="s-cost">0 USD</h3></div>
+  </div>
+
+  <!-- Bộ lọc + bảng -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+      <div class="relative flex-1 min-w-[200px]">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+      </div>
+      <select id="f-type" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none"><option value="">Tất cả loại OT</option></select>
+      <select id="f-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+        <option value="">Tất cả trạng thái</option><option value="pending">Chờ duyệt</option><option value="approved">Đã duyệt</option><option value="rejected">Từ chối</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3">Nhân viên</th><th class="px-4 py-3">Ngày</th><th class="px-4 py-3">Loại OT</th>
+            <th class="px-4 py-3 text-center">Giờ</th><th class="px-4 py-3 text-center">Số giờ</th>
+            <th class="px-4 py-3">Nội dung công việc</th><th class="px-4 py-3 text-right">Ước tính (USD)</th>
+            <th class="px-4 py-3 text-center">Trạng thái</th><th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="ot-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Modal tạo đơn OT -->
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-bold text-slate-800">Tạo đơn tăng ca</h3>
+      <button id="m-close" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="p-5 grid grid-cols-2 gap-4">
+      <label class="text-sm col-span-2">Nhân viên<select id="m-emp" class="inp w-full mt-1 bg-white"></select></label>
+      <label class="text-sm">Ngày tăng ca<input id="m-date" type="date" value="2026-05-28" class="inp w-full mt-1"></label>
+      <label class="text-sm">Loại OT<select id="m-type" class="inp w-full mt-1 bg-white">
+        <option value="thuong">Ngày thường (150%)</option><option value="cn">Chủ nhật (200%)</option><option value="le">Lễ tết (300%)</option></select></label>
+      <label class="text-sm">Giờ bắt đầu<input id="m-from" type="time" value="17:30" class="inp w-full mt-1"></label>
+      <label class="text-sm">Giờ kết thúc<input id="m-to" type="time" value="20:30" class="inp w-full mt-1"></label>
+      <label class="text-sm col-span-2">Nội dung công việc<input id="m-reason" type="text" placeholder="VD: Hoàn thiện báo cáo quyết toán..." class="inp w-full mt-1"></label>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="m-cancel" class="text-sm border border-slate-200 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-50">Hủy</button>
+      <button id="m-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg">Tạo đơn</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  if (!CFG) return;
+
+  const root = document.getElementById('payroll-ot'); if(!root) return;
+  const $ = (s) => document.querySelector(s);
+
+  // Tỷ giá & định dạng tiền tệ
+  const rateVND = 24500;
+  const fmtUSD = (n) => Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+  const fmtVND = (n) => Number(n||0).toLocaleString('vi-VN') + ' đ';
+
+  // Cách tính đơn giá mỗi giờ làm việc = Lương cơ bản / (standardDays * 8 giờ)
+  const RATE_PER_HOUR = (emp) => {
+    const base = emp.baseSalary || 500;
+    const stdDays = CFG.period.standardWorkDays || 26;
+    return base / (stdDays * 8); 
+  };
+
+  const TYPES = { 
+    thuong: ["Ngày thường", "150%", 1.5, "bg-emerald-100 text-emerald-700"], 
+    cn: ["Chủ nhật", "200%", 2.0, "bg-blue-100 text-blue-700"], 
+    le: ["Lễ tết", "300%", 3.0, "bg-red-100 text-red-700"] 
+  };
+  const ST = { 
+    pending: ["Chờ duyệt", "bg-amber-100 text-amber-700"], 
+    approved: ["Đã duyệt", "bg-emerald-100 text-emerald-700"], 
+    rejected: ["Từ chối", "bg-slate-200 text-slate-600"] 
+  };
+
+  // Đồng bộ danh sách nhân viên từ config
+  const EMP = CFG.payrollRows.map(row => [row.code, row.name]);
+
+  // Đồng bộ danh sách đơn tăng ca OT theo nhân viên thực tế trong config
+  const DEFAULT_OT = [
+    [1, "Trần Thị Mỹ Hạnh", "VP010", "28/01/2026", "thuong", "17:30", "20:30", 3, "Hoàn thiện báo cáo quyết toán quý", "pending"],
+    [2, "Lê Minh Kha", "VP033", "25/01/2026", "cn", "08:00", "12:00", 4, "Kiểm tra hệ thống máy chủ cuối tháng", "pending"],
+    [3, "Nguyễn Văn Toàn", "VP002", "20/01/2026", "thuong", "18:00", "21:00", 3, "Họp triển khai kế hoạch năm mới", "approved"],
+    [4, "Đỗ Quốc Tuấn", "VP001", "01/01/2026", "le", "08:00", "11:00", 3, "Trực tết Dương Lịch", "approved"],
+    [5, "Sok Dara", "VP021", "26/01/2026", "thuong", "17:30", "19:30", 2, "Nhập liệu hồ sơ lưu trữ", "rejected"],
+  ];
+
+  const sanitizeOtData = (data) => {
+    if (!Array.isArray(data)) return [];
+    return data.map(r => {
+      if (r && r[2] === "VP021" && r.length === 11) {
+        return [r[0], "Sok Dara", "VP021", "26/01/2026", "thuong", "17:30", "19:30", 2, "Nhập liệu hồ sơ lưu trữ", "rejected"];
+      }
+      if (!r || r.length < 10) return null;
+      if (!['thuong', 'cn', 'le'].includes(r[4])) {
+        r[4] = 'thuong';
+      }
+      r[7] = Number(r[7]) || 0;
+      return r.slice(0, 10);
+    }).filter(Boolean);
+  };
+
+  let OT = [];
+  try {
+    const stored = localStorage.getItem('mkc_ot_requests');
+    if (stored) {
+      OT = sanitizeOtData(JSON.parse(stored));
+      localStorage.setItem('mkc_ot_requests', JSON.stringify(OT));
+    } else {
+      OT = sanitizeOtData(DEFAULT_OT);
+      localStorage.setItem('mkc_ot_requests', JSON.stringify(OT));
+    }
+  } catch (e) {
+    OT = sanitizeOtData(DEFAULT_OT);
+  }
+
+  let nextId = OT.length ? Math.max(...OT.map(r => r[0])) + 1 : 1;
+
+  const fType = $('#f-type'), fStatus = $('#f-status'), fSearch = $('#f-search'), body = $('#ot-body');
+  fType.innerHTML = '<option value="">Tất cả loại OT</option>';
+  Object.entries(TYPES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v[0]; fType.appendChild(o); });
+  
+  // Đổ danh sách vào Modal select
+  const selectEmp = $('#m-emp');
+  selectEmp.innerHTML = '';
+  EMP.forEach(e=>{ const o=document.createElement('option'); o.value=e[0]; o.textContent=e[1]+' ('+e[0]+')'; selectEmp.appendChild(o); });
+
+  // Tính chi phí OT theo công thức thực tế
+  function estimate(r){ 
+    const empCode = r[2];
+    const employee = CFG.payrollRows.find(e => e.code === empCode);
+    const hourlyRate = employee ? RATE_PER_HOUR(employee) : 5.0; // fallback 5 USD/h
+    const multiplier = TYPES[r[4]][2];
+    const hours = r[7];
+    return hours * hourlyRate * multiplier;
+  }
+
+  // Cập nhật tiêu đề kỳ
+  $('#period-label').textContent = CFG.period.label;
+
+  function stats(){
+    $('#s-pending').textContent = OT.filter(r=>r[9]==='pending').length;
+    $('#s-approved').textContent = OT.filter(r=>r[9]==='approved').length;
+    const ap = OT.filter(r=>r[9]==='approved');
+    $('#s-hours').textContent = ap.reduce((a,r)=>a+r[7],0) + 'h';
+    
+    const totalCostUSD = ap.reduce((a,r)=>a+estimate(r),0);
+    $('#s-cost').innerHTML = `${fmtUSD(totalCostUSD)}<br><span class="text-xs text-slate-400 font-normal">~${fmtVND(totalCostUSD * rateVND)}</span>`;
+  }
+
+  // Chuyển tiếp sang hồ sơ chi tiết khi click nhân sự
+  window.viewProfile = (code) => {
+    localStorage.setItem('selected_emp_code', code);
+    window.location.href = 'ho-so-chi-tiet-nhan-vien.html';
+  };
+
+  function render(){
+    const q = fSearch.value.trim().toLowerCase(), t = fType.value, s = fStatus.value;
+    const rows = OT.filter(r => (!q || r[1].toLowerCase().includes(q) || r[2].toLowerCase().includes(q)) && (!t || r[4] === t) && (!s || r[9] === s));
+    body.innerHTML = rows.length ? rows.map(r => {
+      const [tl, pct,, tc] = TYPES[r[4]], [sl, sc] = ST[r[9]];
+      const act = r[9] === 'pending'
+        ? `<button data-id="${r[0]}" data-act="approved" class="act text-emerald-600 hover:bg-emerald-50 rounded-lg px-2 py-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
+           <button data-id="${r[0]}" data-act="rejected" class="act text-red-500 hover:bg-red-50 rounded-lg px-2 py-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>`
+        : `<button class="text-slate-400 hover:text-brand px-2 py-1" title="Xem chi tiết" onclick="viewProfile('${r[2]}')"><i class="fa-solid fa-eye"></i></button>`;
+      
+      const costUSD = estimate(r);
+
+      return `<tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-4 py-3 hover:bg-slate-100/80 cursor-pointer transition-colors" onclick="viewProfile('${r[2]}')">
+          <p class="font-semibold text-slate-800 hover:text-brand transition-colors flex items-center gap-1">${r[1]} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i></p>
+          <p class="text-xs text-slate-400 font-mono">${r[2]}</p>
+        </td>
+        <td class="px-4 py-3 text-slate-600">${r[3]}</td>
+        <td class="px-4 py-3"><span class="${tc} text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap">${tl} · ${pct}</span></td>
+        <td class="px-4 py-3 text-center text-slate-600 whitespace-nowrap">${r[5]}–${r[6]}</td>
+        <td class="px-4 py-3 text-center font-semibold">${r[7]}h</td>
+        <td class="px-4 py-3 text-slate-500">${r[8]}</td>
+        <td class="px-4 py-3 text-right font-semibold text-slate-700">
+          ${fmtUSD(costUSD)}<br>
+          <span class="text-[10px] text-slate-400 font-normal">~${fmtVND(costUSD * rateVND)}</span>
+        </td>
+        <td class="px-4 py-3 text-center"><span class="${sc} text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">${sl}</span></td>
+        <td class="px-4 py-3 text-center whitespace-nowrap">${act}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="9" class="px-4 py-10 text-center text-slate-400">Không có đơn phù hợp.</td></tr>`;
+
+    body.querySelectorAll('.act').forEach(b => b.onclick = () => { 
+      const r = OT.find(x => x[0] == b.dataset.id); 
+      if (r) { 
+        r[9] = b.dataset.act; 
+        try {
+          localStorage.setItem('mkc_ot_requests', JSON.stringify(OT));
+        } catch (e) {}
+        render(); 
+        stats(); 
+      } 
+    });
+  }
+
+  // Modal
+  const modal = $('#modal');
+  const openM = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); };
+  const closeM = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  $('#btn-new').onclick = openM; $('#m-close').onclick = closeM; $('#m-cancel').onclick = closeM;
+  modal.onclick = (e) => { if(e.target === modal) closeM(); };
+
+  $('#m-save').onclick = () => {
+    const emp = CFG.payrollRows.find(e => e.code === $('#m-emp').value);
+    if (!emp) return;
+    const d = $('#m-date').value, type = $('#m-type').value, from = $('#m-from').value, to = $('#m-to').value, reason = $('#m-reason').value.trim();
+    if(!d || !from || !to){ return; }
+    const [fh, fm] = from.split(':').map(Number), [th, tm] = to.split(':').map(Number);
+    let hrs = ((th*60+tm)-(fh*60+fm))/60; if(hrs<0) hrs+=24; hrs = Math.round(hrs*10)/10;
+    const dd = d.split('-'); const dateVN = `${dd[2]}/${dd[1]}/${dd[0]}`;
+    OT.unshift([nextId++, emp.name, emp.code, dateVN, type, from, to, hrs, reason||'(Chưa nhập nội dung)', 'pending']);
+    try {
+      localStorage.setItem('mkc_ot_requests', JSON.stringify(OT));
+    } catch (e) {
+      console.error(e);
+    }
+    $('#m-reason').value = ''; closeM(); render(); stats();
+  };
+
+  [fSearch, fType, fStatus].forEach(el => el.addEventListener('input', render));
+  render(); stats();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đồng bộ dữ liệu chấm công - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .switch{ position:relative; width:42px; height:23px; } .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:9999px; transition:.2s; cursor:pointer; }
+  .slider:before{ content:""; position:absolute; height:17px; width:17px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#10b981; } .switch input:checked + .slider:before{ transform:translateX(19px); }
+</style>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-attendance-sync"> và <script> cuối -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-attendance-sync" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Tiêu đề -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Đồng bộ dữ liệu chấm công</h1>
+      <p class="text-sm text-slate-500 mt-1">Quản lý nguồn dữ liệu (máy vân tay / phần mềm / file) và lịch sử đồng bộ.</p>
+    </div>
+    <button id="btn-sync-all" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-rotate"></i> Đồng bộ tất cả</button>
+  </div>
+
+  <!-- Thẻ thống kê -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Nguồn đang kết nối</p><h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="s-src">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Bản ghi hôm nay</p><h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="s-rec">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Đồng bộ gần nhất</p><h3 class="text-lg font-extrabold text-slate-800 mt-1.5" id="s-last">—</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Cảnh báo / lỗi</p><h3 class="text-2xl font-extrabold text-amber-500 mt-1" id="s-err">0</h3></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Nguồn dữ liệu -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100"><h2 class="font-bold text-slate-800">Nguồn dữ liệu</h2></div>
+      <div id="src-list" class="divide-y divide-slate-100"></div>
+    </div>
+
+    <!-- Import từ file -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+      <h2 class="font-bold text-slate-800">Import từ file</h2>
+      <div id="dropzone" class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-brand transition-colors cursor-pointer">
+        <i class="fa-solid fa-file-arrow-up text-3xl text-slate-300 mb-2"></i>
+        <p class="text-sm text-slate-600 font-medium">Kéo thả hoặc bấm chọn file</p>
+        <p class="text-xs text-slate-400 mt-1">Hỗ trợ .xlsx, .csv, .dat (máy chấm công)</p>
+        <input id="file-input" type="file" class="hidden" accept=".xlsx,.csv,.dat" />
+      </div>
+      <p id="file-name" class="text-sm text-slate-500 hidden"></p>
+      <button id="btn-import" class="w-full text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2"><i class="fa-solid fa-upload"></i> Import dữ liệu</button>
+      <div class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
+        <p class="font-semibold text-slate-600 mb-1">Cấu trúc file mẫu:</p>
+        Mã NV · Ngày · Giờ vào · Giờ ra <a href="#" class="text-brand hover:underline">(tải mẫu)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lịch sử đồng bộ -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-bold text-slate-800">Lịch sử đồng bộ / import</h2>
+      <button id="btn-clear" class="text-sm text-slate-400 hover:text-red-500"><i class="fa-solid fa-broom"></i> Xóa nhật ký</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr><th class="px-4 py-3">Thời gian</th><th class="px-4 py-3">Nguồn</th><th class="px-4 py-3">Phương thức</th>
+            <th class="px-4 py-3 text-center">Bản ghi</th><th class="px-4 py-3 text-center">Trạng thái</th><th class="px-4 py-3">Người thực hiện</th></tr>
+        </thead>
+        <tbody id="log-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all pointer-events-none">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toast-msg"> Đã đồng bộ.</span>
+  </div>
+</section>
+
+<script>
+(function(){
+  const root=document.getElementById('payroll-attendance-sync'); if(!root) return;
+  const $=(s)=>root.querySelector(s);
+
+  // [tên, loại, mô tả/IP, kết nối(bool), lần cuối, auto(bool)]
+  const SRC = [
+    ["Máy vân tay VP - Tầng 2","fingerprint","192.168.1.21 · ZKTeco",true,"06:00 19/06/2026",true],
+    ["Máy vân tay VP - Tầng 3","fingerprint","192.168.1.22 · ZKTeco",true,"06:00 19/06/2026",true],
+    ["Phần mềm chấm công Wise Eye","software","API · Đồng bộ định kỳ",true,"05:30 19/06/2026",true],
+    ["App Mobile (GPS check-in)","mobile","Nhân viên đi công tác",false,"17/06/2026",false],
+  ];
+  const ICON = { fingerprint:"fa-fingerprint", software:"fa-server", mobile:"fa-mobile-screen" };
+
+  // [thời gian, nguồn, phương thức, bản ghi, trạng thái]
+  let LOG = [
+    ["06:00 19/06/2026","Máy vân tay VP - Tầng 2","Tự động",312,"ok"],
+    ["06:00 19/06/2026","Máy vân tay VP - Tầng 3","Tự động",288,"ok"],
+    ["05:30 19/06/2026","Phần mềm Wise Eye","Tự động",602,"warn"],
+    ["18:10 18/06/2026","File Excel T5.xlsx","Thủ công",45,"ok"],
+    ["06:00 18/06/2026","Máy vân tay VP - Tầng 2","Tự động",310,"err"],
+  ];
+  const STLOG = { ok:["Thành công","bg-emerald-100 text-emerald-700"], warn:["Cảnh báo","bg-amber-100 text-amber-700"], err:["Lỗi","bg-red-100 text-red-700"] };
+  const now=()=>{ const d=new Date(); const p=(n)=>String(n).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())} ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`; };
+
+  function renderSrc(){
+    $('#src-list').innerHTML = SRC.map((s,i)=>`
+      <div class="flex items-center gap-4 px-5 py-4">
+        <div class="w-11 h-11 rounded-xl ${s[3]?'bg-emerald-100 text-brand':'bg-slate-100 text-slate-400'} flex items-center justify-center text-lg shrink-0"><i class="fa-solid ${ICON[s[1]]}"></i></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <p class="font-semibold text-slate-800 truncate">${s[0]}</p>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${s[3]?'bg-emerald-100 text-emerald-700':'bg-slate-200 text-slate-500'}">${s[3]?'Đang kết nối':'Mất kết nối'}</span>
+          </div>
+          <p class="text-xs text-slate-400">${s[2]} · Lần cuối: ${s[4]}</p>
+        </div>
+        <label class="flex items-center gap-2 text-xs text-slate-500" title="Tự động đồng bộ">
+          <span class="switch"><input type="checkbox" data-i="${i}" class="auto" ${s[5]?'checked':''}><span class="slider"></span></span>
+        </label>
+        <button data-i="${i}" class="sync-one text-sm border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${s[3]?'':'opacity-40 pointer-events-none'}"><i class="fa-solid fa-rotate"></i> Đồng bộ</button>
+      </div>`).join('');
+    $('#src-list').querySelectorAll('.sync-one').forEach(b=> b.onclick=()=> syncSource(+b.dataset.i));
+    $('#src-list').querySelectorAll('.auto').forEach(c=> c.onchange=()=>{ SRC[+c.dataset.i][5]=c.checked; });
+  }
+
+  function renderLog(){
+    $('#log-body').innerHTML = LOG.length ? LOG.map(l=>{
+      const [sl,sc]=STLOG[l[4]];
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 text-slate-600 whitespace-nowrap">${l[0]}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${l[1]}</td>
+        <td class="px-4 py-3 text-slate-600">${l[2]}</td>
+        <td class="px-4 py-3 text-center font-semibold">${l[3]}</td>
+        <td class="px-4 py-3 text-center"><span class="${sc} text-xs font-bold px-2.5 py-1 rounded-full">${sl}</span></td>
+        <td class="px-4 py-3 text-slate-500">${l[5]||'Hệ thống'}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">Chưa có nhật ký.</td></tr>`;
+  }
+
+  function stats(){
+    $('#s-src').textContent = SRC.filter(s=>s[3]).length;
+    $('#s-rec').textContent = LOG.filter(l=>l[0].includes('19/06/2026')).reduce((a,l)=>a+l[3],0);
+    $('#s-last').textContent = LOG[0] ? LOG[0][0] : '—';
+    $('#s-err').textContent = LOG.filter(l=>l[4]==='err'||l[4]==='warn').length;
+  }
+
+  function toast(msg){ $('#toast-msg').textContent=' '+msg; const t=$('#toast');
+    t.style.opacity='1'; t.style.transform='translateY(0)'; setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(8px)'; },1800); }
+
+  function syncSource(i){
+    const s=SRC[i]; const rec=280+Math.floor(Math.random()*40);
+    s[4]=now(); LOG.unshift([now(), s[0], "Thủ công", rec, "ok", "Bạn"]);
+    renderSrc(); renderLog(); stats(); toast(`Đã đồng bộ "${s[0]}" — ${rec} bản ghi.`);
+  }
+
+  $('#btn-sync-all').onclick=()=>{
+    SRC.forEach((s,i)=>{ if(s[3]){ const rec=280+Math.floor(Math.random()*40); s[4]=now(); LOG.unshift([now(), s[0], "Tự động", rec, "ok", "Bạn"]); } });
+    renderSrc(); renderLog(); stats(); toast('Đã đồng bộ tất cả nguồn đang kết nối.');
+  };
+
+  // import file
+  $('#dropzone').onclick=()=> $('#file-input').click();
+  $('#file-input').onchange=(e)=>{ const f=e.target.files[0]; if(f){ $('#file-name').textContent='Đã chọn: '+f.name; $('#file-name').classList.remove('hidden'); } };
+  $('#btn-import').onclick=()=>{
+    const fn=$('#file-input').files[0]; const name=fn?fn.name:'File chấm công.xlsx';
+    const rec=30+Math.floor(Math.random()*60);
+    LOG.unshift([now(), 'File '+name, 'Thủ công', rec, 'ok', 'Bạn']);
+    renderLog(); stats(); toast(`Đã import ${rec} bản ghi từ ${name}.`);
+  };
+  $('#btn-clear').onclick=()=>{ LOG=[]; renderLog(); stats(); toast('Đã xóa nhật ký.'); };
+
+  renderSrc(); renderLog(); stats();
+})();
+</script>
+</body>
+</html>

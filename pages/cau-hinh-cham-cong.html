@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cấu hình chấm công & ca làm việc - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .switch{ position:relative; width:44px; height:24px; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:9999px; transition:.2s; cursor:pointer; }
+  .slider:before{ content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#10b981; }
+  .switch input:checked + .slider:before{ transform:translateX(20px); }
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+</style>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-attendance-config"> và <script> cuối -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-attendance-config" class="p-6 max-w-screen-xl mx-auto space-y-6">
+
+  <!-- Tiêu đề -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Cấu hình chấm công &amp; ca làm việc</h1>
+      <p class="text-sm text-slate-500 mt-1">Bộ quy tắc dùng chung — áp dụng cho việc tính công &amp; xử lý đi muộn/về sớm.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="btn-reset" class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-arrow-rotate-left"></i> Khôi phục</button>
+      <button id="btn-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình</button>
+    </div>
+  </div>
+
+  <!-- Phạm vi áp dụng -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex items-center gap-2 text-brand font-semibold"><i class="fa-solid fa-layer-group"></i> Phạm vi áp dụng</div>
+      <select id="scope" class="inp bg-white" aria-label="Phạm vi áp dụng">
+        <option value="all">Dùng chung toàn hệ thống (mặc định)</option>
+        <option value="vn">Riêng — Việt Nam</option>
+        <option value="la">Riêng — Lào</option>
+        <option value="kh">Riêng — Campuchia</option>
+        <option value="dept">Riêng — theo phòng ban</option>
+      </select>
+      <span class="text-xs text-slate-500"><i class="fa-solid fa-circle-info"></i> Cấu hình riêng sẽ <b>kế thừa</b> cấu hình dùng chung và chỉ ghi đè phần thay đổi.</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Ca làm việc -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+      <h2 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-regular fa-clock text-brand"></i> Ca làm việc</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <label class="text-sm">Giờ vào sáng<input type="time" value="07:30" class="inp w-full mt-1"></label>
+        <label class="text-sm">Giờ ra chiều<input type="time" value="17:00" class="inp w-full mt-1"></label>
+        <label class="text-sm">Bắt đầu nghỉ trưa<input type="time" value="11:30" class="inp w-full mt-1"></label>
+        <label class="text-sm">Kết thúc nghỉ trưa<input type="time" value="13:00" class="inp w-full mt-1"></label>
+        <label class="text-sm">Số giờ chuẩn / ngày<input type="number" value="8" class="inp w-full mt-1"></label>
+        <label class="text-sm">Ngày công chuẩn / tháng
+          <select class="inp w-full mt-1 bg-white"><option>Theo ngày làm việc thực tế</option><option>Cố định 26</option><option>Cố định 24</option></select>
+        </label>
+      </div>
+      <div>
+        <p class="text-sm mb-2">Ngày làm việc trong tuần</p>
+        <div class="flex flex-wrap gap-2" id="weekdays"></div>
+      </div>
+    </div>
+
+    <!-- Làm tròn & OT -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+      <h2 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-calculator text-brand"></i> Làm tròn công &amp; Làm thêm giờ (OT)</h2>
+      <label class="text-sm block">Đơn vị công nhỏ nhất
+        <select class="inp w-full mt-1 bg-white"><option>0.5 công (nửa buổi)</option><option>1.0 công</option><option>0.25 công</option></select>
+      </label>
+      <div class="border-t border-slate-100 pt-4">
+        <p class="text-sm font-medium mb-2">Hệ số làm thêm giờ</p>
+        <div class="grid grid-cols-3 gap-3">
+          <label class="text-sm">Ngày thường<div class="relative"><input type="number" value="150" class="inp w-full mt-1 pr-7"><span class="absolute right-3 top-3 text-slate-400 text-sm">%</span></div></label>
+          <label class="text-sm">Chủ nhật<div class="relative"><input type="number" value="200" class="inp w-full mt-1 pr-7"><span class="absolute right-3 top-3 text-slate-400 text-sm">%</span></div></label>
+          <label class="text-sm">Lễ, Tết<div class="relative"><input type="number" value="300" class="inp w-full mt-1 pr-7"><span class="absolute right-3 top-3 text-slate-400 text-sm">%</span></div></label>
+        </div>
+      </div>
+      <label class="flex items-center justify-between text-sm pt-2">
+        <span>OT phải <b>đăng ký &amp; duyệt trước</b> mới được tính</span>
+        <span class="switch"><input type="checkbox" checked><span class="slider"></span></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Quy tắc đi muộn / về sớm -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-5">
+    <h2 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-person-running text-brand"></i> Quy tắc đi muộn / về sớm</h2>
+
+    <div class="flex flex-wrap items-center gap-6">
+      <label class="text-sm">Dung sai bỏ qua nếu muộn dưới
+        <div class="relative inline-block"><input type="number" value="5" class="inp w-24 ml-2 pr-12"><span class="absolute right-3 top-2.5 text-slate-400 text-sm">phút</span></div>
+      </label>
+    </div>
+
+    <div>
+      <p class="text-sm font-medium mb-3">Cách xử lý khi đi muộn / về sớm</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="method-group">
+        <label class="method-opt flex items-start gap-3 p-3 border rounded-xl cursor-pointer">
+          <input type="radio" name="method" value="chuyencan" class="mt-1 accent-emerald-600" checked>
+          <span><b class="text-sm">Trừ thưởng chuyên cần / KPI</b><br><span class="text-xs text-slate-500">Không trừ ngày công. Vượt số lượt cho phép sẽ mất chuyên cần.</span></span>
+        </label>
+        <label class="method-opt flex items-start gap-3 p-3 border rounded-xl cursor-pointer">
+          <input type="radio" name="method" value="basc" class="mt-1 accent-emerald-600">
+          <span><b class="text-sm">Trừ tiền theo bậc thang phút muộn</b><br><span class="text-xs text-slate-500">Quy đổi số phút muộn ra mức trừ theo các mốc.</span></span>
+        </label>
+        <label class="method-opt flex items-start gap-3 p-3 border rounded-xl cursor-pointer">
+          <input type="radio" name="method" value="phut" class="mt-1 accent-emerald-600">
+          <span><b class="text-sm">Quy đổi trực tiếp phút → tiền</b><br><span class="text-xs text-slate-500">Trừ theo đơn giá lương/phút của nhân viên.</span></span>
+        </label>
+        <label class="method-opt flex items-start gap-3 p-3 border rounded-xl cursor-pointer">
+          <input type="radio" name="method" value="canhbao" class="mt-1 accent-emerald-600">
+          <span><b class="text-sm">Chỉ cảnh báo</b><br><span class="text-xs text-slate-500">Ghi nhận, không trừ lương.</span></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Cấu hình chuyên cần -->
+    <div id="cfg-chuyencan" class="method-cfg bg-slate-50 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="text-sm">Mức thưởng chuyên cần / tháng
+        <div class="relative"><input type="number" value="500000" class="inp w-full mt-1 pr-8"><span class="absolute right-3 top-3 text-slate-400 text-xs">đ</span></div></label>
+      <label class="text-sm">Số lượt muộn tối đa trước khi mất chuyên cần<input type="number" value="3" class="inp w-full mt-1"></label>
+    </div>
+
+    <!-- Cấu hình bậc thang -->
+    <div id="cfg-basc" class="method-cfg hidden bg-slate-50 rounded-xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-sm font-medium">Bậc thang mức trừ theo phút muộn</p>
+        <button id="add-row" class="text-xs text-brand font-semibold hover:underline"><i class="fa-solid fa-plus"></i> Thêm bậc</button>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="text-slate-500"><tr><th class="text-left py-1">Từ (phút)</th><th class="text-left py-1">Đến (phút)</th><th class="text-left py-1">Mức trừ</th><th></th></tr></thead>
+        <tbody id="basc-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Cấu hình theo phút -->
+    <div id="cfg-phut" class="method-cfg hidden bg-slate-50 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="text-sm">Cách tính đơn giá / phút
+        <select class="inp w-full mt-1 bg-white"><option>Lương cơ bản ÷ (ngày công × giờ × 60)</option><option>Nhập đơn giá cố định</option></select></label>
+      <label class="text-sm">Hệ số nhân khi trừ (penalty)<input type="number" value="1" step="0.1" class="inp w-full mt-1"></label>
+    </div>
+  </div>
+
+  <!-- OQ-020: Ký hiệu chấm công chuẩn -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+    <h2 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-tags text-brand"></i> Ký hiệu chấm công (OQ-020)</h2>
+    <p class="text-xs text-slate-500">Danh sách ký hiệu đã được BA xác nhận. Nhân viên nước ngoài sẽ thấy cả tên Khmer.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr>
+            <th class="px-3 py-2 text-left">Code</th>
+            <th class="px-3 py-2 text-left">Tên Việt</th>
+            <th class="px-3 py-2 text-left">Tên Khmer</th>
+            <th class="px-3 py-2 text-center">Quy đổi</th>
+            <th class="px-3 py-2 text-center">Có lương</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100" id="symbols-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Miễn trừ & ưu tiên dữ liệu -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+    <h2 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-shield text-brand"></i> Miễn trừ &amp; ưu tiên dữ liệu</h2>
+
+    <label class="flex items-center justify-between text-sm">
+      <span>Miễn trừ chấm muộn/về sớm cho <b>nhóm chức danh quản lý</b></span>
+      <span class="switch"><input type="checkbox" id="tg-mientru" checked><span class="slider"></span></span>
+    </label>
+    <div id="mientru-tags" class="flex flex-wrap items-center gap-2">
+      <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">Tổng/Phó TGĐ <i class="fa-solid fa-xmark cursor-pointer"></i></span>
+      <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">Trưởng phòng <i class="fa-solid fa-xmark cursor-pointer"></i></span>
+      <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">Phó phòng <i class="fa-solid fa-xmark cursor-pointer"></i></span>
+      <button class="text-xs text-brand font-semibold hover:underline"><i class="fa-solid fa-plus"></i> Thêm chức danh</button>
+    </div>
+
+    <label class="flex items-center justify-between text-sm border-t border-slate-100 pt-4">
+      <span><b>Đơn xin đi muộn / giải trình đã duyệt</b> sẽ ghi đè dữ liệu máy chấm công</span>
+      <span class="switch"><input type="checkbox" checked><span class="slider"></span></span>
+    </label>
+    <label class="flex items-center justify-between text-sm">
+      <span>Tính đủ công khi có <b>đơn công tác / đào tạo</b> được duyệt (dù thiếu dữ liệu máy)</span>
+      <span class="switch"><input type="checkbox" checked><span class="slider"></span></span>
+    </label>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all pointer-events-none">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i> Đã lưu cấu hình.
+  </div>
+</section>
+
+<script>
+(function(){
+  const root = document.getElementById('payroll-attendance-config');
+  if(!root) return;
+
+  // ngày trong tuần
+  const wd = root.querySelector('#weekdays');
+  ['T2','T3','T4','T5','T6','T7','CN'].forEach((d,i)=>{
+    const on = i<5; // T2-T6 mặc định
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=d; b.dataset.on=on;
+    b.className='px-3 py-1.5 rounded-lg text-sm font-medium border '+(on?'bg-emerald-50 border-emerald-300 text-emerald-700':'bg-white border-slate-200 text-slate-500');
+    b.onclick=()=>{ const v=b.dataset.on!=='true'; b.dataset.on=v;
+      b.className='px-3 py-1.5 rounded-lg text-sm font-medium border '+(v?'bg-emerald-50 border-emerald-300 text-emerald-700':'bg-white border-slate-200 text-slate-500'); };
+    wd.appendChild(b);
+  });
+
+  // chọn phương pháp -> hiện cấu hình tương ứng
+  const cfgs = { chuyencan:'#cfg-chuyencan', basc:'#cfg-basc', phut:'#cfg-phut', canhbao:null };
+  function syncMethod(){
+    const v = root.querySelector('input[name="method"]:checked').value;
+    Object.values(cfgs).forEach(sel=> sel && root.querySelector(sel).classList.add('hidden'));
+    if(cfgs[v]) root.querySelector(cfgs[v]).classList.remove('hidden');
+    root.querySelectorAll('.method-opt').forEach(o=>{
+      const on=o.querySelector('input').checked;
+      o.classList.toggle('border-emerald-400', on); o.classList.toggle('bg-emerald-50/40', on);
+      o.classList.toggle('border-slate-200', !on);
+    });
+  }
+  root.querySelectorAll('input[name="method"]').forEach(r=> r.addEventListener('change', syncMethod));
+
+  // bảng bậc thang
+  const bascBody = root.querySelector('#basc-body');
+  function bascRow(a,b,c){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="py-1 pr-2"><input type="number" value="${a}" class="inp w-24"></td>
+      <td class="py-1 pr-2"><input type="number" value="${b}" class="inp w-24"></td>
+      <td class="py-1 pr-2"><input type="text" value="${c}" class="inp w-40"></td>
+      <td class="py-1"><button class="text-slate-400 hover:text-red-500 del"><i class="fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector('.del').onclick=()=>tr.remove();
+    bascBody.appendChild(tr);
+  }
+  bascRow(6,15,'20.000 đ'); bascRow(16,30,'50.000 đ'); bascRow(31,60,'Nửa công');
+  root.querySelector('#add-row').onclick=()=>bascRow('', '', '');
+
+  // miễn trừ tags toggle
+  const tgM=root.querySelector('#tg-mientru'), tags=root.querySelector('#mientru-tags');
+  tgM.addEventListener('change',()=> tags.style.opacity = tgM.checked?'1':'.4');
+  tags.querySelectorAll('.fa-xmark').forEach(x=> x.onclick=()=>x.closest('span').remove());
+
+  // lưu / khôi phục + toast
+  const toast=root.querySelector('#toast');
+  function showToast(msg){ toast.querySelector('i').nextSibling.textContent=' '+msg;
+    toast.style.opacity='1'; toast.style.transform='translateY(0)';
+    setTimeout(()=>{ toast.style.opacity='0'; toast.style.transform='translateY(8px)'; },1800); }
+  root.querySelector('#btn-save').onclick=()=> showToast('Đã lưu cấu hình.');
+  root.querySelector('#btn-reset').onclick=()=> showToast('Đã khôi phục mặc định.');
+
+  syncMethod();
+
+  // OQ-020: Render ký hiệu chấm công từ config
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  if (CFG && CFG.attendanceSymbols) {
+    const symbolsBody = document.getElementById('symbols-body');
+    symbolsBody.innerHTML = CFG.attendanceSymbols.map(s => `
+      <tr class="hover:bg-slate-50">
+        <td class="px-3 py-2 font-mono font-bold text-brand">${s.code}</td>
+        <td class="px-3 py-2">${s.name}</td>
+        <td class="px-3 py-2 text-slate-500">${s.nameKH || '—'}</td>
+        <td class="px-3 py-2 text-center font-semibold ${s.value > 0 ? 'text-emerald-600' : 'text-slate-400'}">${s.value}</td>
+        <td class="px-3 py-2 text-center">${s.isPaid ? '<i class="fa-solid fa-check text-emerald-500"></i>' : '<i class="fa-solid fa-xmark text-red-400"></i>'}</td>
+      </tr>
+    `).join('');
+  }
+})();
+</script>
+</body>
+</html>

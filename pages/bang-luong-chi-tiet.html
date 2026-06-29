@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bảng lương chi tiết - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .num{ font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-sheet-detail" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Bảng lương chi tiết (THANH TOAN)</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Kỳ <span id="ky-label" class="font-semibold text-slate-700">Tháng 01/2026</span>
+        · USD là tiền tệ chính · Tính theo rule/version cấu hình
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="f-ky" class="inp bg-white text-sm" title="Chọn kỳ tính lương"></select>
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button id="btn-recalc" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Tính lại</button>
+    </div>
+  </div>
+
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex flex-wrap items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>
+      Workbook 01/2026 chỉ là dữ liệu đối soát. Công thức, tỷ giá, ngày công chuẩn, PIT/NSSF và khấu trừ được lấy từ cấu hình:
+      <b id="rule-version">VP-2026.01</b>.
+    </span>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="bg-white p-3 rounded-xl border border-slate-100 text-center border-l-4 border-l-brand">
+      <p class="text-xs text-slate-500">Tổng gross workbook</p><p class="font-bold text-emerald-600 num" id="t-income">0</p></div>
+    <div class="bg-white p-3 rounded-xl border border-slate-100 text-center">
+      <p class="text-xs text-slate-500">Lương thời gian</p><p class="font-bold text-slate-700 num" id="t-time">0</p></div>
+    <div class="bg-white p-3 rounded-xl border border-slate-100 text-center">
+      <p class="text-xs text-slate-500">PIT Campuchia</p><p class="font-bold text-slate-700 num" id="t-tax">0</p></div>
+    <div class="bg-white p-3 rounded-xl border border-slate-100 text-center">
+      <p class="text-xs text-slate-500">Tiền điện sheet Dien</p><p class="font-bold text-red-500 num" id="t-electric">0</p></div>
+    <div class="bg-white p-3 rounded-xl border border-slate-100 text-center">
+      <p class="text-xs text-slate-500">Số NV tính lương</p><p class="font-extrabold text-brand num" id="t-count">0</p></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-3">
+    <div class="relative flex-1 min-w-[220px]">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+      <input id="f-search" type="text" placeholder="Tìm nhân viên, passport..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+    </div>
+    <select id="f-dept" class="inp bg-white text-sm" title="Chọn phòng ban"><option value="">Tất cả phòng ban</option></select>
+    <select id="f-view" class="inp bg-white text-sm" title="Chọn chế độ xem">
+      <option value="all">Tất cả cột</option>
+      <option value="income">Nhóm thu nhập</option>
+      <option value="deduction">Nhóm khấu trừ</option>
+    </select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-bold text-slate-800">Bảng chi tiết theo cấu trúc Excel C-AL</h2>
+        <p class="text-xs text-slate-500 mt-1">Các dòng dưới là mẫu đối soát; tổng workbook lấy từ cấu hình kỳ lương.</p>
+      </div>
+      <span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-1 rounded-full" id="exchange-label">1 USD = 4,026 KHR</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-3 py-2.5 sticky left-0 bg-slate-50 z-20 min-w-[180px]">Nhân viên</th>
+            <th class="px-2 py-2.5 text-right income-col">Lương định suất</th>
+            <th class="px-2 py-2.5 text-center income-col">Công</th>
+            <th class="px-2 py-2.5 text-right income-col th-timeSalary">Lương TG</th>
+            <th class="px-2 py-2.5 text-right income-col th-meal">Tiền ăn</th>
+            <th class="px-2 py-2.5 text-right income-col th-holidaySalary">Lễ/Tết</th>
+            <th class="px-2 py-2.5 text-right income-col th-house">Tiền nhà</th>
+            <th class="px-2 py-2.5 text-right income-col th-bonus">Thưởng</th>
+            <th class="px-2 py-2.5 text-right income-col th-seniority" title="OQ-013: Thâm niên không chịu thuế">TN (Q)</th>
+            <th class="px-2 py-2.5 text-right income-col th-seniority" title="OQ-013: Thâm niên chịu thuế">TN (R)</th>
+            <th class="px-2 py-2.5 text-right bg-emerald-50">Gross</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-advance">Tạm ứng</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-otherTax">Thuế khác</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-pit">PIT</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-union">CĐ phí</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-nssf" title="OQ-001: NSSF Pension NLĐ 2%">Pension</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-socialInsurance" title="BHXH NLĐ 8% = (Hệ số + PC) × Lương cơ sở × 8%">BHXH 8%</th>
+            <th class="px-2 py-2.5 text-right deduction-col th-healthInsurance" title="BHYT NLĐ 1.5% = (Hệ số + PC) × Lương cơ sở × 1.5%">BHYT 1.5%</th>
+            <th class="px-2 py-2.5 text-right deduction-col">Tổng nợ</th>
+            <th class="px-2 py-2.5 text-right bg-brand/10 font-bold">Thực lĩnh</th>
+            <th class="px-2 py-2.5 text-center">Xem</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+        <tfoot class="bg-slate-50 font-bold text-slate-800">
+          <tr id="tbl-foot"></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
+      <h3 class="font-bold text-slate-800" id="modal-title">Phiếu lương</h3>
+      <button id="m-close" type="button" class="text-slate-400 hover:text-slate-600" aria-label="Đóng" title="Đóng"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
+    </div>
+    <div id="modal-body" class="p-5 space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  const money = n => (Number(n)||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+  const num = n => (Number(n)||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const val = (r, key) => Number(r[key] || 0);
+
+  // Hàm đọc số tiền tạm ứng đã duyệt hoặc hoàn ứng trong kỳ (đơn vị USD) từ localStorage
+  const getRepaidOrApprovedAdvance = (empCode, period) => {
+    try {
+      const stored = localStorage.getItem('mkc_advance_requests');
+      if (!stored) return 0;
+      const requests = JSON.parse(stored);
+      // Lọc các đơn của nhân viên, đúng kỳ, và đã được approved hoặc repaid
+      const validRequests = requests.filter(r => r[1] === empCode && r[3] === period && (r[7] === 'approved' || r[7] === 'repaid'));
+      return validRequests.reduce((sum, r) => sum + r[4], 0);
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  // Mẫu quy tắc lương mặc định nếu localStorage chưa có
+  const DEFAULT_PLUS = [
+    ['timeSalary','Lương theo thời gian','formula',1640.77,true],
+    ['meal','Tiền ăn','fixed',60,true],
+    ['arrears','Truy lĩnh','manual',0,true],
+    ['holidaySalary','Lương lễ/tết','formula',60.77,true],
+    ['house','Tiền nhà','fixed',30,true],
+    ['leaveSalary','Lương nghỉ phép','formula',0,true],
+    ['abcBonus','Thưởng ABC','manual',0,true],
+    ['holidayBonus','Thưởng lễ/tết','manual',30,true],
+    ['supplement','Bổ sung','manual',0,true],
+    ['seniority','Thâm niên','formula',0,true],
+  ];
+
+  const DEFAULT_MINUS = [
+    ['advance','Tạm ứng','manual',30,true],
+    ['otherTax','Thuế thu nhập khác','manual',20,true],
+    ['pit','Thuế TNCN Campuchia','auto',138.09,true],
+    ['unionFee','CĐ phí','manual',5,true],
+    ['visaWorkPermit','Visa / Sổ LĐ','manual',0,true],
+    ['unionHouse','Mái ấm CĐ','manual',0,true],
+    ['nssf','BH hưu trí CPC','auto',5.97,true],
+    ['socialInsurance','BHXH','auto',64.23,true],
+    ['healthInsurance','BHYT','auto',12.04,true],
+    ['unemployment','BHTN','auto',8.03,true],
+    ['electricity','Tiền điện đã post','formula',0,true],
+  ];
+
+  // 1. ĐỌC KỲ LƯƠNG ĐANG CHỌN & CONFIG
+  const urlParams = new URLSearchParams(window.location.search);
+  let selectedPeriod = urlParams.get('ky') || localStorage.getItem('selected_payroll_period') || '01/2026';
+  localStorage.setItem('selected_payroll_period', selectedPeriod);
+
+  let periodConfig = JSON.parse(localStorage.getItem('mkc_salary_period_config')) || {
+    formulaVersion: CFG.period.formulaVersion || "VP-2026.01",
+    standardWorkDays: CFG.period.standardWorkDays || 26,
+    exchangeRate: CFG.period.exchangeRate || 4026,
+    scope: "kh",
+    status: "Đang áp dụng"
+  };
+
+  let rulesPlus = JSON.parse(localStorage.getItem('mkc_salary_rules_plus')) || DEFAULT_PLUS;
+  let rulesMinus = JSON.parse(localStorage.getItem('mkc_salary_rules_minus')) || DEFAULT_MINUS;
+
+  // Tiện ích kiểm tra quy tắc có được bật hay không
+  const isRuleEnabled = (key, rulesList) => {
+    const r = rulesList.find(x => x[0] === key);
+    return r ? r[4] !== false : true;
+  };
+
+  // 2. KHỞI TẠO VÀ TÍNH TOÁN DỮ LIỆU NHÂN VIÊN
+  let calculatedRows = JSON.parse(localStorage.getItem('mkc_calculated_payroll_rows_' + selectedPeriod));
+  
+  // Hàm tạo dòng dữ liệu gốc để giữ nguyên giá trị trước khi áp dụng rule
+  const initOriginalValues = (rows) => {
+    return rows.map(r => ({
+      ...r,
+      mealOrig: r.mealOrig !== undefined ? r.mealOrig : r.meal,
+      houseOrig: r.houseOrig !== undefined ? r.houseOrig : r.house,
+      abcBonusOrig: r.abcBonusOrig !== undefined ? r.abcBonusOrig : r.abcBonus,
+      holidayBonusOrig: r.holidayBonusOrig !== undefined ? r.holidayBonusOrig : r.holidayBonus,
+      supplementOrig: r.supplementOrig !== undefined ? r.supplementOrig : r.supplement,
+      seniorityNonTaxableOrig: r.seniorityNonTaxableOrig !== undefined ? r.seniorityNonTaxableOrig : (r.seniorityNonTaxable || 0),
+      seniorityTaxableOrig: r.seniorityTaxableOrig !== undefined ? r.seniorityTaxableOrig : (r.seniorityTaxable || 0),
+      advanceOrig: r.advanceOrig !== undefined ? r.advanceOrig : r.advance,
+      otherTaxOrig: r.otherTaxOrig !== undefined ? r.otherTaxOrig : r.otherTax,
+      pitOrig: r.pitOrig !== undefined ? r.pitOrig : r.pit,
+      unionFeeOrig: r.unionFeeOrig !== undefined ? r.unionFeeOrig : r.unionFee,
+      visaWorkPermitOrig: r.visaWorkPermitOrig !== undefined ? r.visaWorkPermitOrig : r.visaWorkPermit,
+      unionHouseOrig: r.unionHouseOrig !== undefined ? r.unionHouseOrig : r.unionHouse,
+      nssfOrig: r.nssfOrig !== undefined ? r.nssfOrig : r.nssf,
+      socialInsuranceOrig: r.socialInsuranceOrig !== undefined ? r.socialInsuranceOrig : r.socialInsurance,
+      healthInsuranceOrig: r.healthInsuranceOrig !== undefined ? r.healthInsuranceOrig : r.healthInsurance,
+      unemploymentOrig: r.unemploymentOrig !== undefined ? r.unemploymentOrig : r.unemployment,
+      electricityOrig: r.electricityOrig !== undefined ? r.electricityOrig : (r.electricity || r.electricitySheetAmount || 0)
+    }));
+  };
+
+  // Hàm tính toán chi tiết cho 1 nhân viên dựa trên các quy tắc đang bật/tắt
+  const recalcRow = (r) => {
+    const checkPlus = (key) => isRuleEnabled(key, rulesPlus);
+    const checkMinus = (key) => isRuleEnabled(key, rulesMinus);
+
+    const standardWorkDays = Number(periodConfig.standardWorkDays) || 26;
+
+    // Lương thời gian
+    const timeSalary = checkPlus('timeSalary')
+      ? Math.round((r.baseSalary / standardWorkDays * r.actualDays) * 100) / 100
+      : 0;
+
+    // Lương lễ tết
+    const holidaySalary = checkPlus('holidaySalary')
+      ? Math.round((r.baseSalary / standardWorkDays * r.holidayDays) * 100) / 100
+      : 0;
+
+    // Lương nghỉ phép
+    const leaveSalary = checkPlus('leaveSalary')
+      ? Math.round((r.baseSalary / standardWorkDays * r.leaveDays) * 100) / 100
+      : 0;
+
+    // Các khoản thu nhập khác
+    const meal = checkPlus('meal') ? r.mealOrig : 0;
+    const house = checkPlus('house') ? r.houseOrig : 0;
+    const abcBonus = checkPlus('abcBonus') ? r.abcBonusOrig : 0;
+    const holidayBonus = checkPlus('holidayBonus') ? r.holidayBonusOrig : 0;
+    const supplement = checkPlus('supplement') ? r.supplementOrig : 0;
+    const seniorityNonTaxable = checkPlus('seniority') ? r.seniorityNonTaxableOrig : 0;
+    const seniorityTaxable = checkPlus('seniority') ? r.seniorityTaxableOrig : 0;
+
+    const gross = Math.round((timeSalary + meal + r.arrears + holidaySalary + house + leaveSalary + abcBonus + holidayBonus + supplement + seniorityNonTaxable + seniorityTaxable) * 100) / 100;
+
+    // Các khoản khấu trừ
+    const reqAdvanceUSD = getRepaidOrApprovedAdvance(r.code, selectedPeriod);
+    let finalAdvanceUSD = r.advanceOrig;
+    if (reqAdvanceUSD > 0) {
+      finalAdvanceUSD = reqAdvanceUSD;
+    }
+    const advance = checkMinus('advance') ? finalAdvanceUSD : 0;
+    const otherTax = checkMinus('otherTax') ? r.otherTaxOrig : 0;
+    const pit = checkMinus('pit') ? r.pitOrig : 0;
+
+    const unionFee = checkMinus('unionFee') ? r.unionFeeOrig : 0;
+    const visaWorkPermit = checkMinus('visaWorkPermit') ? r.visaWorkPermitOrig : 0;
+    const unionHouse = checkMinus('unionHouse') ? r.unionHouseOrig : 0;
+
+    const nssf = checkMinus('nssf') ? r.nssfOrig : 0;
+    const socialInsurance = checkMinus('socialInsurance') ? r.socialInsuranceOrig : 0;
+    const healthInsurance = checkMinus('healthInsurance') ? r.healthInsuranceOrig : 0;
+    const unemployment = checkMinus('unemployment') ? r.unemploymentOrig : 0;
+    const electricity = checkMinus('electricity') ? r.electricityOrig : 0;
+
+    const deductionTotal = Math.round((advance + otherTax + pit + unionFee + visaWorkPermit + unionHouse + nssf + socialInsurance + healthInsurance + unemployment + electricity) * 100) / 100;
+    const netPay = Math.round((gross - deductionTotal) * 100) / 100;
+
+    return {
+      ...r,
+      timeSalary,
+      holidaySalary,
+      leaveSalary,
+      meal,
+      house,
+      abcBonus,
+      holidayBonus,
+      supplement,
+      seniorityNonTaxable,
+      seniorityTaxable,
+      gross,
+      advance,
+      otherTax,
+      pit,
+      unionFee,
+      visaWorkPermit,
+      unionHouse,
+      nssf,
+      socialInsurance,
+      healthInsurance,
+      unemployment,
+      electricity,
+      deductionTotal,
+      netPay
+    };
+  };
+
+  // Tính lại toàn bộ danh sách
+  const recalcAll = (rows) => {
+    return rows.map(r => recalcRow(r));
+  };
+
+  // Khởi tạo calculatedRows nếu chưa có
+  if (!calculatedRows) {
+    calculatedRows = initOriginalValues(CFG.payrollRows);
+    calculatedRows = recalcAll(calculatedRows);
+    localStorage.setItem('mkc_calculated_payroll_rows_' + selectedPeriod, JSON.stringify(calculatedRows));
+  }
+
+  // 3. THIẾT LẬP GIAO DIỆN CHUNG
+  document.getElementById('ky-label').textContent = 'Tháng ' + selectedPeriod;
+  document.getElementById('rule-version').textContent = `${periodConfig.formulaVersion} · PIT-KH-2026.01 · NSSF-KH-2026.01`;
+  document.getElementById('exchange-label').textContent = `1 USD = ${Number(periodConfig.exchangeRate).toLocaleString('en-US')} KHR`;
+
+  // Cập nhật combobox kỳ lương động từ localStorage
+  const fKy = document.getElementById('f-ky');
+  let DATA = JSON.parse(localStorage.getItem('mkc_payroll_periods')) || [
+    [1, '01/2026', CFG.totals.employeeCount, CFG.totals.gross, 1500, 'pending', '1 đợt'],
+    [2, '02/2026', CFG.totals.employeeCount, 0, 0, 'draft', '1 đợt'],
+    [3, '12/2025', 37, 28420.10, 3020.60, 'locked', '1 đợt']
+  ];
+  
+  fKy.innerHTML = '';
+  DATA.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r[1];
+    o.textContent = `Tháng ${r[1]} (${r[5] === 'locked' ? 'Đã khóa' : r[5] === 'approved' ? 'Đã duyệt' : 'Chưa khóa'})`;
+    if (r[1] === selectedPeriod) o.selected = true;
+    fKy.appendChild(o);
+  });
+
+  fKy.onchange = () => {
+    localStorage.setItem('selected_payroll_period', fKy.value);
+    window.location.href = `bang-luong-chi-tiet.html?ky=${fKy.value}`;
+  };
+
+  // Nạp danh mục phòng ban
+  [...new Set(calculatedRows.map(e=>e.department))].forEach(d=>{
+    const o=document.createElement('option'); o.value=d; o.textContent=d;
+    document.getElementById('f-dept').appendChild(o);
+  });
+
+  function applyView(){
+    const view=document.getElementById('f-view').value;
+    document.querySelectorAll('.income-col').forEach(el=> el.classList.toggle('hidden', view==='deduction'));
+    document.querySelectorAll('.deduction-col').forEach(el=> el.classList.toggle('hidden', view==='income'));
+  }
+
+  // Hàm style động cho các ô bị vô hiệu hóa
+  const getCellClass = (key, rules) => {
+    const enabled = isRuleEnabled(key, rules);
+    return enabled ? '' : 'opacity-30 line-through text-slate-400 bg-slate-50/50';
+  };
+
+  const getUnionCellClass = () => {
+    const checkMinus = (key) => isRuleEnabled(key, rulesMinus);
+    const isUnionEnabled = checkMinus('unionFee') || checkMinus('visaWorkPermit') || checkMinus('unionHouse');
+    return isUnionEnabled ? '' : 'opacity-30 line-through text-slate-400 bg-slate-50/50';
+  };
+
+  // Style header động
+  function styleHeaders() {
+    const checkAndStyle = (selector, key, rules) => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      const enabled = isRuleEnabled(key, rules);
+      el.classList.toggle('opacity-30', !enabled);
+      el.classList.toggle('line-through', !enabled);
+      if (!enabled) el.title = 'Đang bị TẮT trong Cấu hình công thức';
+    };
+
+    checkAndStyle('.th-timeSalary', 'timeSalary', rulesPlus);
+    checkAndStyle('.th-meal', 'meal', rulesPlus);
+    checkAndStyle('.th-holidaySalary', 'holidaySalary', rulesPlus);
+    checkAndStyle('.th-house', 'house', rulesPlus);
+    checkAndStyle('.th-bonus', 'holidayBonus', rulesPlus);
+    checkAndStyle('.th-seniority', 'seniority', rulesPlus);
+    
+    checkAndStyle('.th-advance', 'advance', rulesMinus);
+    checkAndStyle('.th-otherTax', 'otherTax', rulesMinus);
+    checkAndStyle('.th-pit', 'pit', rulesMinus);
+    
+    // Nghiệp đoàn phí
+    const thUnion = document.querySelector('.th-union');
+    if (thUnion) {
+      const checkMinus = (key) => isRuleEnabled(key, rulesMinus);
+      const isUnionEnabled = checkMinus('unionFee') || checkMinus('visaWorkPermit') || checkMinus('unionHouse');
+      thUnion.classList.toggle('opacity-30', !isUnionEnabled);
+      thUnion.classList.toggle('line-through', !isUnionEnabled);
+    }
+    
+    checkAndStyle('.th-nssf', 'nssf', rulesMinus);
+    checkAndStyle('.th-socialInsurance', 'socialInsurance', rulesMinus);
+    checkAndStyle('.th-healthInsurance', 'healthInsurance', rulesMinus);
+  }
+
+  // 4. HÀM VẼ BẢNG VÀ THÔNG TIN TỔNG HỢP
+  function render(){
+    const q=document.getElementById('f-search').value.trim().toLowerCase();
+    const dep=document.getElementById('f-dept').value;
+    const visible=calculatedRows.filter(r =>
+      (!q || r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q) || r.passport.toLowerCase().includes(q)) &&
+      (!dep || r.department === dep)
+    );
+
+    let totalGross=0, totalTime=0, totalTax=0, totalElectric=0, totalDed=0, totalNet=0;
+    
+    // Cộng dồn toàn bộ 5 nhân sự hiện tại
+    calculatedRows.forEach(r => {
+      totalGross += r.gross;
+      totalTime += r.timeSalary;
+      totalTax += r.pit;
+      totalElectric += r.electricity;
+      totalDed += r.deductionTotal;
+      totalNet += r.netPay;
+    });
+
+    // Cập nhật các thẻ thống kê tổng quan
+    document.getElementById('t-income').textContent = money(totalGross);
+    document.getElementById('t-time').textContent = money(totalTime);
+    document.getElementById('t-tax').textContent = money(totalTax);
+    document.getElementById('t-electric').textContent = money(totalElectric);
+    document.getElementById('t-count').textContent = calculatedRows.length + ' người';
+
+    // Vẽ từng dòng nhân sự
+    let sampleGross=0, sampleDed=0, sampleNet=0;
+    document.getElementById('tbl-body').innerHTML = visible.map(r=>{
+      const takeHome = r.netPay;
+      const totalDeduction = r.deductionTotal;
+      sampleGross += r.gross; 
+      sampleDed += totalDeduction; 
+      sampleNet += takeHome;
+
+      return `<tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-3 py-2 sticky left-0 bg-white z-10">
+          <p class="font-semibold text-slate-800 hover:text-brand cursor-pointer" onclick="viewEmployeeProfile('${r.code}')">${r.name}</p>
+          <p class="text-xs text-slate-400">${r.code} · ${r.department} · ${r.passport}</p>
+        </td>
+        <td class="px-2 py-2 text-right num income-col">${num(r.baseSalary)}</td>
+        <td class="px-2 py-2 text-center num income-col">${num(r.actualDays)}</td>
+        <td class="px-2 py-2 text-right num income-col ${getCellClass('timeSalary', rulesPlus)}">${num(r.timeSalary)}</td>
+        <td class="px-2 py-2 text-right num income-col ${getCellClass('meal', rulesPlus)}">${num(r.meal)}</td>
+        <td class="px-2 py-2 text-right num income-col ${getCellClass('holidaySalary', rulesPlus)}">${num(r.holidaySalary)}</td>
+        <td class="px-2 py-2 text-right num income-col ${getCellClass('house', rulesPlus)}">${num(r.house)}</td>
+        <td class="px-2 py-2 text-right num income-col ${getCellClass('holidayBonus', rulesPlus)}">${num(r.holidayBonus + r.abcBonus + r.supplement)}</td>
+        <td class="px-2 py-2 text-right num income-col text-slate-500 ${getCellClass('seniority', rulesPlus)}" title="Thâm niên không chịu thuế">${num(r.seniorityNonTaxable || 0)}</td>
+        <td class="px-2 py-2 text-right num income-col text-slate-500 ${getCellClass('seniority', rulesPlus)}" title="Thâm niên chịu thuế">${num(r.seniorityTaxable || 0)}</td>
+        <td class="px-2 py-2 text-right num font-semibold bg-emerald-50/50">${num(r.gross)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('advance', rulesMinus)}">${num(r.advance)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('otherTax', rulesMinus)}">${num(r.otherTax)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('pit', rulesMinus)}">${num(r.pit)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getUnionCellClass()}">${num(r.unionFee + r.visaWorkPermit + r.unionHouse)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('nssf', rulesMinus)}" title="NSSF Pension">${num(r.nssf)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('socialInsurance', rulesMinus)}" title="BHXH 8%">${num(r.socialInsurance)}</td>
+        <td class="px-2 py-2 text-right num text-red-500 deduction-col ${getCellClass('healthInsurance', rulesMinus)}" title="BHYT 1.5%">${num(r.healthInsurance)}</td>
+        <td class="px-2 py-2 text-right num font-semibold text-red-600 deduction-col">${num(totalDeduction)}</td>
+        <td class="px-2 py-2 text-right num font-bold text-brand bg-brand/5">${num(takeHome)}</td>
+        <td class="px-2 py-2 text-center"><button data-id="${r.code}" class="view text-brand hover:bg-emerald-50 rounded-lg px-2 py-1"><i class="fa-solid fa-receipt"></i></button></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="21" class="px-4 py-10 text-center text-slate-400">Không có dữ liệu.</td></tr>`;
+
+    // Tính toán số lượng cột income và deduction đang hiển thị để set colspan động
+    let visibleIncomeCols = 9;
+    ['timeSalary','meal','holidaySalary','house','holidayBonus','seniority','seniority'].forEach(key => {
+      // Vì có 2 seniority, và 1 actualDays/baseSalary luôn hiển thị, đếm lại:
+    });
+    // Tính lại cho chính xác:
+    // Mặc định BaseSalary (1) và ActualDays (1) luôn hiển thị.
+    // Các cột khác phụ thuộc rules.
+    const iC = [
+      true, true, // base, days
+      isRuleEnabled('timeSalary', rulesPlus),
+      isRuleEnabled('meal', rulesPlus),
+      isRuleEnabled('holidaySalary', rulesPlus),
+      isRuleEnabled('house', rulesPlus),
+      isRuleEnabled('holidayBonus', rulesPlus),
+      isRuleEnabled('seniority', rulesPlus),
+      isRuleEnabled('seniority', rulesPlus)
+    ];
+    visibleIncomeCols = iC.filter(Boolean).length;
+
+    const dC = [
+      isRuleEnabled('advance', rulesMinus),
+      isRuleEnabled('otherTax', rulesMinus),
+      isRuleEnabled('pit', rulesMinus),
+      document.querySelector('.th-union')?.classList.contains('hidden') === false ? true : (isRuleEnabled('unionFee', rulesMinus) || isRuleEnabled('visaWorkPermit', rulesMinus) || isRuleEnabled('unionHouse', rulesMinus)),
+      isRuleEnabled('nssf', rulesMinus),
+      isRuleEnabled('socialInsurance', rulesMinus),
+      isRuleEnabled('healthInsurance', rulesMinus)
+    ];
+    let visibleDedCols = dC.filter(Boolean).length;
+
+    document.getElementById('tbl-foot').innerHTML = `
+      <td class="px-3 py-3 sticky left-0 bg-slate-50 border-t border-slate-200">Tổng cộng đang hiển thị (${visible.length} dòng)</td>
+      <td colspan="${visibleIncomeCols}" class="income-col border-t border-slate-200"></td>
+      <td class="px-2 py-3 text-right num bg-emerald-50 border-t border-slate-200 font-bold">${num(sampleGross)}</td>
+      <td colspan="${visibleDedCols}" class="deduction-col border-t border-slate-200"></td>
+      <td class="px-2 py-3 text-right num text-red-500 deduction-col font-bold border-t border-slate-200">${num(sampleDed)}</td>
+      <td class="px-2 py-3 text-right num text-brand bg-brand/10 font-bold border-t border-slate-200">${num(sampleNet)}</td>
+      <td class="border-t border-slate-200"></td>`;
+
+    document.querySelectorAll('.view').forEach(b=> b.onclick=()=>showSlip(b.dataset.id));
+    applyView();
+    styleHeaders();
+  }
+
+  // Điều hướng sang hồ sơ nhân viên khi click vào tên
+  window.viewEmployeeProfile = (empCode) => {
+    localStorage.setItem('selected_emp_code', empCode);
+    window.location.href = `ho-so-chi-tiet-nhan-vien.html`;
+  };
+
+  // 5. MODAL PHIẾU LƯƠNG ĐỐI SOÁT
+  function showSlip(code){
+    const r=calculatedRows.find(e=>e.code===code); if(!r) return;
+    const cdVisa = r.unionFee + r.visaWorkPermit + r.unionHouse;
+
+    const checkPlus = (key) => isRuleEnabled(key, rulesPlus);
+    const checkMinus = (key) => isRuleEnabled(key, rulesMinus);
+
+    const checkText = (key, val, isPlus) => {
+      const enabled = isRuleEnabled(key, isPlus ? rulesPlus : rulesMinus);
+      return enabled ? money(val) : `<span class="line-through text-slate-400">${money(val)}</span> <span class="text-[10px] text-red-500 font-normal">(Đã tắt)</span>`;
+    };
+
+    document.getElementById('modal-title').textContent = 'Phiếu lương đối soát thực tế - ' + r.name;
+    document.getElementById('modal-body').innerHTML = `
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <p class="font-semibold text-slate-800">${r.name} · ${r.department}</p>
+        <p class="text-xs text-slate-500 mt-1">${r.code} · Passport/CMND: ${r.passport} · Tháng ${selectedPeriod}</p>
+        <p class="text-xs text-emerald-700 mt-2">Công thức version: ${periodConfig.formulaVersion} · Ngày công chuẩn kỳ: ${periodConfig.standardWorkDays} ngày</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <h4 class="font-bold text-emerald-700 border-b pb-1">Thu nhập</h4>
+          <div class="flex justify-between"><span>Lương định suất</span><span class="font-semibold num">${money(r.baseSalary)}</span></div>
+          <div class="flex justify-between"><span>Công thực tế / chuẩn</span><span class="font-semibold num">${num(r.actualDays)} / ${periodConfig.standardWorkDays}</span></div>
+          <div class="flex justify-between"><span>Lương thời gian</span><span class="font-semibold num">${checkText('timeSalary', r.timeSalary, true)}</span></div>
+          <div class="flex justify-between"><span>Tiền ăn</span><span class="font-semibold num">${checkText('meal', r.meal, true)}</span></div>
+          <div class="flex justify-between"><span>Lễ/Tết</span><span class="font-semibold num">${checkText('holidaySalary', r.holidaySalary, true)}</span></div>
+          <div class="flex justify-between"><span>Tiền nhà</span><span class="font-semibold num">${checkText('house', r.house, true)}</span></div>
+          <div class="flex justify-between"><span>Nghỉ phép</span><span class="font-semibold num">${checkText('leaveSalary', r.leaveSalary, true)}</span></div>
+          <div class="flex justify-between"><span>Thưởng (ABC+Lễ+Bổ sung)</span><span class="font-semibold num">${checkText('holidayBonus', r.holidayBonus + r.abcBonus + r.supplement, true)}</span></div>
+          <div class="flex justify-between text-emerald-700 font-bold border-t pt-2"><span>Gross</span><span>${money(r.gross)}</span></div>
+        </div>
+        <div class="space-y-2">
+          <h4 class="font-bold text-red-600 border-b pb-1">Khấu trừ</h4>
+          <div class="flex justify-between"><span>Tạm ứng</span><span class="font-semibold num">- ${checkText('advance', r.advance, false)}</span></div>
+          <div class="flex justify-between"><span>Thuế thu nhập khác</span><span class="font-semibold num">- ${checkText('otherTax', r.otherTax, false)}</span></div>
+          <div class="flex justify-between"><span>PIT Campuchia</span><span class="font-semibold num">- ${checkText('pit', r.pit, false)}</span></div>
+          <div class="flex justify-between"><span>CĐ phí / Visa / Mái ấm</span><span class="font-semibold num">- ${checkText('unionFee', cdVisa, false)}</span></div>
+          <div class="flex justify-between"><span>NSSF Pension CPC</span><span class="font-semibold num">- ${checkText('nssf', r.nssf, false)}</span></div>
+          <div class="flex justify-between"><span>BHXH NLĐ 8%</span><span class="font-semibold num">- ${checkText('socialInsurance', r.socialInsurance, false)}</span></div>
+          <div class="flex justify-between"><span>BHYT NLĐ 1.5%</span><span class="font-semibold num">- ${checkText('healthInsurance', r.healthInsurance, false)}</span></div>
+          <div class="flex justify-between"><span>Tiền điện</span><span class="font-semibold num">- ${checkText('electricity', r.electricity, false)}</span></div>
+          <div class="flex justify-between text-red-600 font-bold border-t pt-2"><span>Tổng nợ / tổng trừ</span><span>${money(r.deductionTotal)}</span></div>
+          <div class="flex justify-between text-brand font-extrabold text-lg border-t-2 border-brand pt-2"><span>Thực lĩnh</span><span>${money(r.netPay)}</span></div>
+        </div>
+      </div>`;
+    const m=document.getElementById('modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+  }
+
+  // 6. SỰ KIỆN TÍNH LẠI LƯƠNG
+  document.getElementById('btn-recalc').onclick = () => {
+    // Đọc lại config mới nhất từ localStorage (nếu có thay đổi ở trang Cấu hình)
+    periodConfig = JSON.parse(localStorage.getItem('mkc_salary_period_config')) || periodConfig;
+    rulesPlus = JSON.parse(localStorage.getItem('mkc_salary_rules_plus')) || rulesPlus;
+    rulesMinus = JSON.parse(localStorage.getItem('mkc_salary_rules_minus')) || rulesMinus;
+
+    // Chạy lại thuật toán tính toán
+    calculatedRows = initOriginalValues(calculatedRows);
+    calculatedRows = recalcAll(calculatedRows);
+    
+    // Lưu kết quả tính chi tiết vào localStorage
+    localStorage.setItem('mkc_calculated_payroll_rows_' + selectedPeriod, JSON.stringify(calculatedRows));
+
+    // Tự động chuyển các đơn tạm ứng 'approved' của kỳ này thành 'repaid' (Đã hoàn ứng)
+    try {
+      const stored = localStorage.getItem('mkc_advance_requests');
+      if (stored) {
+        let requests = JSON.parse(stored);
+        let updated = false;
+        requests = requests.map(req => {
+          if (req[3] === selectedPeriod && req[7] === 'approved') {
+            req[7] = 'repaid';
+            updated = true;
+          }
+          return req;
+        });
+        if (updated) {
+          localStorage.setItem('mkc_advance_requests', JSON.stringify(requests));
+        }
+      }
+    } catch(e) {}
+
+    // Tính tổng quỹ lương kỳ
+    let totalGross = 0;
+    let totalDed = 0;
+    calculatedRows.forEach(r => {
+      totalGross += r.gross;
+      totalDed += r.deductionTotal;
+    });
+
+    // Cập nhật ngược lại vào danh sách kỳ lương mkc_payroll_periods
+    let updatedDATA = DATA.map(r => {
+      if (r[1] === selectedPeriod) {
+        return [r[0], r[1], calculatedRows.length, totalGross, totalDed, 'calculated', r[6]];
+      }
+      return r;
+    });
+    localStorage.setItem('mkc_payroll_periods', JSON.stringify(updatedDATA));
+    DATA = updatedDATA;
+
+    // Cập nhật UI
+    document.getElementById('exchange-label').textContent = `1 USD = ${Number(periodConfig.exchangeRate).toLocaleString('en-US')} KHR`;
+    document.getElementById('rule-version').textContent = `${periodConfig.formulaVersion} · PIT-KH-2026.01 · NSSF-KH-2026.01`;
+    render();
+
+    // Hiển thị thông báo
+    const alertBox = document.createElement('div');
+    alertBox.className = "fixed top-5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-xl z-50 flex items-center gap-2.5 animate-bounce";
+    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã tính lại lương và đồng bộ kỳ ${selectedPeriod} thành công!`;
+    document.body.appendChild(alertBox);
+    setTimeout(() => alertBox.remove(), 2500);
+  };
+
+  document.getElementById('m-close').onclick=()=>{ document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); };
+  document.getElementById('modal').onclick=(e)=>{ if(e.target.id==='modal') document.getElementById('m-close').click(); };
+  document.getElementById('f-search').oninput=render;
+  document.getElementById('f-dept').onchange=render;
+  document.getElementById('f-view').onchange=applyView;
+
+  // Lần đầu load trang
+  render();
+})();
+</script>
+</body>
+</html>

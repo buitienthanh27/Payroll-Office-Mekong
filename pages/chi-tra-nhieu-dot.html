@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chi trả nhiều đợt - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script src="payroll-store.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+  .num{ font-variant-numeric:tabular-nums; }
+  .progress-bar{ width:0%; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-multi-pay" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Chi trả nhiều đợt</h1>
+      <p class="text-sm text-slate-500 mt-1">Quản lý chi lương theo đợt trong tháng — tạm ứng, phần còn lại. USD là tiền tệ chính.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="f-ky" class="inp bg-white text-sm" aria-label="Chọn kỳ lương"></select>
+      <button id="btn-config" class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-gear"></i> Cấu hình đợt</button>
+    </div>
+  </div>
+
+  <div id="info-box" class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <span id="info-text">Đang tải...</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div><span class="bg-brand text-white text-xs font-bold px-2 py-1 rounded">Đợt 1</span>
+          <h3 class="font-bold text-slate-800 mt-2" id="b1-title">Tạm chi 50% — —</h3></div>
+        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full" id="b1-status">Chờ chi</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+        <div><p class="text-slate-500">Số tiền</p><p class="font-extrabold text-brand num text-lg" id="b1-amt">0 USD</p></div>
+        <div><p class="text-slate-500">Nhân viên</p><p class="font-bold text-slate-800" id="b1-emp">0/0</p></div>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-2"><div id="b1-bar" class="bg-brand h-2 rounded-full transition-all progress-bar"></div></div>
+      <button id="btn-pay1" class="mt-4 text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg w-full"><i class="fa-solid fa-money-bill-transfer"></i> Thực hiện chi đợt 1</button>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-amber-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div><span class="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">Đợt 2</span>
+          <h3 class="font-bold text-slate-800 mt-2" id="b2-title">Phần còn lại 50% — —</h3></div>
+        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full" id="b2-status">Chờ chi</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+        <div><p class="text-slate-500">Số tiền</p><p class="font-extrabold text-brand num text-lg" id="b2-amt">0 USD</p></div>
+        <div><p class="text-slate-500">Nhân viên</p><p class="font-bold text-slate-800" id="b2-emp">0/0</p></div>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-2"><div id="b2-bar" class="bg-amber-400 h-2 rounded-full transition-all progress-bar"></div></div>
+      <button id="btn-pay2" class="mt-4 text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg w-full"><i class="fa-solid fa-money-bill-transfer"></i> Thực hiện chi đợt 2</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Tổng thực lĩnh kỳ</p><h3 class="text-xl font-extrabold text-slate-800 mt-1 num" id="s-total">0 USD</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100">
+      <p class="text-sm text-slate-500 font-medium">Đã chi</p><h3 class="text-xl font-extrabold text-emerald-600 mt-1 num" id="s-paid">0 USD</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-100">
+      <p class="text-sm text-slate-500 font-medium">Còn lại</p><h3 class="text-xl font-extrabold text-amber-600 mt-1 num" id="s-remain">0 USD</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Số đợt</p><h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="s-batches">2</h3></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+      <i class="fa-solid fa-users text-brand"></i><h2 class="font-bold text-slate-800">Chi tiết theo nhân viên</h2>
+    </div>
+    <div class="p-4 border-b border-slate-100">
+      <div class="relative max-w-xs">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3">Nhân viên</th>
+            <th class="px-4 py-3 text-right">Thực lĩnh (USD)</th>
+            <th class="px-4 py-3 text-right">Đợt 1 (50%)</th>
+            <th class="px-4 py-3 text-center">TT Đ1</th>
+            <th class="px-4 py-3 text-right">Đợt 2 (50%)</th>
+            <th class="px-4 py-3 text-center">TT Đ2</th>
+            <th class="px-4 py-3 text-right">Còn lại</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Modal cấu hình -->
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="font-bold text-slate-800">Cấu hình chi trả đợt</h3>
+      <button id="m-close" type="button" class="text-slate-400 hover:text-slate-600" aria-label="Đóng cửa sổ" title="Đóng cửa sổ"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <label class="text-sm block">Số đợt chi
+        <select id="m-batches" class="inp w-full mt-1 bg-white">
+          <option value="1">1 đợt (100%)</option>
+          <option value="2" selected>2 đợt (50% - 50%)</option>
+          <option value="3">3 đợt</option>
+        </select>
+      </label>
+      <div id="batch-config-1" class="grid grid-cols-2 gap-3">
+        <label class="text-sm block">Đợt 1 — %<input id="m-pct1" type="number" value="50" min="1" max="100" class="inp w-full mt-1" /></label>
+        <label class="text-sm block">Ngày chi<input id="m-date1" type="date" class="inp w-full mt-1" /></label>
+      </div>
+      <div id="batch-config-2" class="grid grid-cols-2 gap-3">
+        <label class="text-sm block">Đợt 2 — %<input id="m-pct2" type="number" value="50" min="1" max="100" class="inp w-full mt-1" /></label>
+        <label class="text-sm block">Ngày chi<input id="m-date2" type="date" class="inp w-full mt-1" /></label>
+      </div>
+      <div id="batch-config-3" class="grid grid-cols-2 gap-3 hidden">
+        <label class="text-sm block">Đợt 3 — %<input id="m-pct3" type="number" value="0" min="0" max="100" class="inp w-full mt-1" /></label>
+        <label class="text-sm block">Ngày chi<input id="m-date3" type="date" class="inp w-full mt-1" /></label>
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="m-cancel" type="button" class="text-sm border border-slate-200 px-4 py-2 rounded-lg">Hủy</button>
+      <button id="m-save" type="button" class="text-sm bg-brand text-white font-semibold px-4 py-2 rounded-lg">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  const STORE = window.MKC_STORE;
+  const fmt = STORE.fmt.currency;
+
+  // State
+  let currentPeriod = CFG.period?.code || '2026-01';
+  let batchConfig = STORE.storage.get('batch_config_' + currentPeriod, {
+    batches: 2,
+    pct: [50, 50, 0],
+    dates: ['2026-02-10', '2026-02-25', ''],
+    payments: {} // { empCode: [d1Paid, d2Paid, d3Paid] }
+  });
+
+  // Init period selector
+  function initPeriodSelector() {
+    const sel = document.getElementById('f-ky');
+    ['01/2026', '02/2026', '03/2026', '04/2026', '05/2026'].forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.replace('/', '-');
+      opt.textContent = 'Tháng ' + p;
+      opt.selected = p.replace('/', '-') === currentPeriod.replace('-', '/').split('/').reverse().join('-');
+      sel.appendChild(opt);
+    });
+    sel.onchange = () => {
+      currentPeriod = sel.value;
+      batchConfig = STORE.storage.get('batch_config_' + currentPeriod, {
+        batches: 2, pct: [50, 50, 0], dates: ['', '', ''], payments: {}
+      });
+      render();
+    };
+  }
+
+  // Load payroll data từ store
+  function getPayrollData() {
+    const payroll = STORE.payroll.getByPeriod(currentPeriod);
+    if (!payroll) {
+      // Fallback to config
+      return (CFG.payrollRows || []).map(r => ({
+        code: r.code,
+        name: r.name,
+        department: r.department,
+        netPay: r.netPay || (r.gross - (r.advance || 0) - (r.pit || 0) - (r.nssf || 0) - (r.socialInsurance || 0) - (r.healthInsurance || 0) - (r.electricity || 0))
+      }));
+    }
+    return payroll.employees;
+  }
+
+  // Render
+  function render() {
+    const employees = getPayrollData();
+    const q = document.getElementById('f-search').value.trim().toLowerCase();
+    const filtered = employees.filter(e => !q || e.code.toLowerCase().includes(q) || e.name.toLowerCase().includes(q));
+
+    // Calc totals
+    let totalNet = 0, totalPaid = 0;
+    let d1Count = 0, d2Count = 0;
+
+    const paidIcon = '<span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span>';
+    const waitIcon = '<span class="text-amber-400"><i class="fa-solid fa-clock"></i></span>';
+
+    document.getElementById('tbl-body').innerHTML = filtered.map(emp => {
+      const net = emp.netPay || 0;
+      totalNet += net;
+
+      const payments = batchConfig.payments[emp.code] || [false, false, false];
+      const d1Amt = net * (batchConfig.pct[0] / 100);
+      const d2Amt = net * (batchConfig.pct[1] / 100);
+      const d1Paid = payments[0] ? d1Amt : 0;
+      const d2Paid = payments[1] ? d2Amt : 0;
+      const remain = net - d1Paid - d2Paid;
+
+      totalPaid += d1Paid + d2Paid;
+      if (payments[0]) d1Count++;
+      if (payments[1]) d2Count++;
+
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-2.5"><p class="font-semibold">${emp.name}</p><p class="text-xs text-slate-400">${emp.code} · ${emp.department}</p></td>
+        <td class="px-4 py-2.5 text-right num font-semibold">${fmt(net)}</td>
+        <td class="px-4 py-2.5 text-right num">${fmt(d1Amt)}</td>
+        <td class="px-4 py-2.5 text-center">${payments[0] ? paidIcon : waitIcon}</td>
+        <td class="px-4 py-2.5 text-right num">${fmt(d2Amt)}</td>
+        <td class="px-4 py-2.5 text-center">${payments[1] ? paidIcon : waitIcon}</td>
+        <td class="px-4 py-2.5 text-right num ${remain > 0 ? 'text-amber-600 font-semibold' : 'text-emerald-600'}">${fmt(remain)}</td>
+      </tr>`;
+    }).join('');
+
+    const total = employees.length;
+    const d1Amt = totalNet * (batchConfig.pct[0] / 100);
+    const d2Amt = totalNet * (batchConfig.pct[1] / 100);
+
+    // Update stats
+    document.getElementById('s-total').textContent = fmt(totalNet);
+    document.getElementById('s-paid').textContent = fmt(totalPaid);
+    document.getElementById('s-remain').textContent = fmt(totalNet - totalPaid);
+    document.getElementById('s-batches').textContent = batchConfig.batches;
+
+    // Batch 1
+    document.getElementById('b1-title').textContent = `Tạm chi ${batchConfig.pct[0]}% — ${batchConfig.dates[0] || '—'}`;
+    document.getElementById('b1-amt').textContent = fmt(d1Amt);
+    document.getElementById('b1-emp').textContent = `${d1Count}/${total}`;
+    document.getElementById('b1-bar').style.width = (total > 0 ? d1Count / total * 100 : 0) + '%';
+    if (d1Count === total && total > 0) {
+      document.getElementById('b1-status').textContent = 'Đã chi';
+      document.getElementById('b1-status').className = 'bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full';
+      document.getElementById('btn-pay1').disabled = true;
+      document.getElementById('btn-pay1').classList.add('opacity-50');
+    } else {
+      document.getElementById('b1-status').textContent = 'Chờ chi';
+      document.getElementById('b1-status').className = 'bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full';
+      document.getElementById('btn-pay1').disabled = false;
+      document.getElementById('btn-pay1').classList.remove('opacity-50');
+    }
+
+    // Batch 2
+    document.getElementById('b2-title').textContent = `Phần còn lại ${batchConfig.pct[1]}% — ${batchConfig.dates[1] || '—'}`;
+    document.getElementById('b2-amt').textContent = fmt(d2Amt);
+    document.getElementById('b2-emp').textContent = `${d2Count}/${total}`;
+    document.getElementById('b2-bar').style.width = (total > 0 ? d2Count / total * 100 : 0) + '%';
+    if (d2Count === total && total > 0) {
+      document.getElementById('b2-status').textContent = 'Đã chi';
+      document.getElementById('b2-status').className = 'bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full';
+      document.getElementById('btn-pay2').disabled = true;
+      document.getElementById('btn-pay2').classList.add('opacity-50');
+    } else {
+      document.getElementById('b2-status').textContent = 'Chờ chi';
+      document.getElementById('b2-status').className = 'bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full';
+      document.getElementById('btn-pay2').disabled = false;
+      document.getElementById('btn-pay2').classList.remove('opacity-50');
+    }
+
+    // Info box
+    document.getElementById('info-text').innerHTML = `Kỳ <b>${currentPeriod.replace('-', '/')}</b>: chi <b>${batchConfig.batches} đợt</b> — ` +
+      `Đợt 1: <b>${batchConfig.pct[0]}%</b> ngày <b>${batchConfig.dates[0] || '—'}</b> · ` +
+      `Đợt 2: <b>${batchConfig.pct[1]}%</b> ngày <b>${batchConfig.dates[1] || '—'}</b>`;
+  }
+
+  // Pay batch
+  function payBatch(batchIdx) {
+    const employees = getPayrollData();
+    const batchName = batchIdx === 0 ? 'đợt 1' : 'đợt 2';
+    if (!confirm(`Xác nhận chi trả ${batchName} cho tất cả ${employees.length} nhân viên?`)) return;
+
+    employees.forEach(emp => {
+      if (!batchConfig.payments[emp.code]) batchConfig.payments[emp.code] = [false, false, false];
+      batchConfig.payments[emp.code][batchIdx] = true;
+    });
+
+    STORE.storage.set('batch_config_' + currentPeriod, batchConfig);
+    render();
+    alert(`Đã ghi nhận chi trả ${batchName} — ${batchConfig.dates[batchIdx] || new Date().toLocaleDateString('vi-VN')}.`);
+  }
+
+  // Modal
+  const modal = document.getElementById('modal');
+  const closeModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+
+  document.getElementById('btn-config').onclick = () => {
+    document.getElementById('m-batches').value = batchConfig.batches;
+    document.getElementById('m-pct1').value = batchConfig.pct[0];
+    document.getElementById('m-pct2').value = batchConfig.pct[1];
+    document.getElementById('m-pct3').value = batchConfig.pct[2] || 0;
+    document.getElementById('m-date1').value = batchConfig.dates[0] || '';
+    document.getElementById('m-date2').value = batchConfig.dates[1] || '';
+    document.getElementById('m-date3').value = batchConfig.dates[2] || '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
+
+  document.getElementById('m-batches').onchange = function() {
+    const n = parseInt(this.value);
+    document.getElementById('batch-config-2').classList.toggle('hidden', n < 2);
+    document.getElementById('batch-config-3').classList.toggle('hidden', n < 3);
+  };
+
+  document.getElementById('m-close').onclick = closeModal;
+  document.getElementById('m-cancel').onclick = closeModal;
+  modal.onclick = e => { if (e.target === modal) closeModal(); };
+
+  document.getElementById('m-save').onclick = () => {
+    batchConfig.batches = parseInt(document.getElementById('m-batches').value);
+    batchConfig.pct = [
+      parseInt(document.getElementById('m-pct1').value) || 0,
+      parseInt(document.getElementById('m-pct2').value) || 0,
+      parseInt(document.getElementById('m-pct3').value) || 0
+    ];
+    batchConfig.dates = [
+      document.getElementById('m-date1').value,
+      document.getElementById('m-date2').value,
+      document.getElementById('m-date3').value
+    ];
+    STORE.storage.set('batch_config_' + currentPeriod, batchConfig);
+    closeModal();
+    render();
+    alert('Đã lưu cấu hình chi trả đợt.');
+  };
+
+  // Events
+  document.getElementById('f-search').oninput = render;
+  document.getElementById('btn-pay1').onclick = () => payBatch(0);
+  document.getElementById('btn-pay2').onclick = () => payBatch(1);
+
+  // Init
+  initPeriodSelector();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cấu hình cơ cấu thu nhập - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .switch{ position:relative; width:38px; height:21px; display:inline-block; } .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:9999px; transition:.2s; cursor:pointer; }
+  .slider:before{ content:""; position:absolute; height:15px; width:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#10b981; } .switch input:checked + .slider:before{ transform:translateX(17px); }
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; } .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-income-config" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Cấu hình cơ cấu thu nhập</h1>
+      <p class="text-sm text-slate-500 mt-1">Khai báo các thành phần lương của khối văn phòng (lao động gián tiếp).</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="btn-add" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-plus"></i> Thêm thành phần</button>
+    </div>
+  </div>
+
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    Payroll VP Campuchia: thu nhập/khấu trừ được cấu hình theo version. MVP bám workbook Excel: lương định suất USD, tiền ăn, tiền nhà, lễ/tết, nghỉ phép, PIT, NSSF, tiền điện; KPI/OT để giai đoạn 2 nếu khách hàng xác nhận.
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+      <i class="fa-solid fa-lock text-brand"></i><h2 class="font-bold text-slate-800">Thu nhập cố định (hàng tháng)</h2>
+    </div>
+    <div class="overflow-x-auto"><table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-slate-600 font-medium"><tr>
+        <th class="px-4 py-3">Thành phần</th><th class="px-4 py-3">Cách tính</th>
+        <th class="px-4 py-3 text-center">Chịu PIT</th><th class="px-4 py-3 text-center">Đóng NSSF</th>
+        <th class="px-4 py-3 text-center">Áp dụng</th><th class="px-4 py-3 text-center">Xóa</th>
+      </tr></thead>
+      <tbody id="fixed-body" class="divide-y divide-slate-100"></tbody>
+    </table></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+      <i class="fa-solid fa-arrow-trend-up text-brand"></i><h2 class="font-bold text-slate-800">Thu nhập biến động (theo kỳ)</h2>
+    </div>
+    <div class="overflow-x-auto"><table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-slate-600 font-medium"><tr>
+        <th class="px-4 py-3">Thành phần</th><th class="px-4 py-3">Cách tính</th>
+        <th class="px-4 py-3 text-center">Chịu PIT</th><th class="px-4 py-3 text-center">Đóng NSSF</th>
+        <th class="px-4 py-3 text-center">Áp dụng</th><th class="px-4 py-3 text-center">Xóa</th>
+      </tr></thead>
+      <tbody id="var-body" class="divide-y divide-slate-100"></tbody>
+    </table></div>
+  </div>
+
+  <div class="flex justify-end">
+    <button id="btn-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-5 py-2.5 rounded-lg flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình</button>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-bold text-slate-800">Thêm thành phần lương</h3>
+      <button id="m-close" type="button" class="text-slate-400 hover:text-slate-600" aria-label="Đóng" title="Đóng">
+        <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="p-5 space-y-4">
+      <label class="text-sm block">Tên thành phần<input id="m-name" type="text" placeholder="VD: Phụ cấp công tác" class="inp w-full mt-1"></label>
+      <label class="text-sm block">Nhóm<select id="m-group" class="inp w-full mt-1 bg-white"><option value="fixed">Thu nhập cố định</option><option value="var">Thu nhập biến động</option></select></label>
+      <label class="text-sm block">Cách tính<select id="m-method" class="inp w-full mt-1 bg-white"></select></label>
+      <div class="flex items-center gap-6 pt-1">
+        <label class="text-sm flex items-center gap-2">Chịu PIT <span class="switch"><input type="checkbox" id="m-tax" checked><span class="slider"></span></span></label>
+        <label class="text-sm flex items-center gap-2">Đóng NSSF <span class="switch"><input type="checkbox" id="m-bhxh"><span class="slider"></span></span></label>
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="m-cancel" class="text-sm border border-slate-200 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-50">Hủy</button>
+      <button id="m-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg">Thêm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all pointer-events-none">
+  <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toast-msg"> Đã lưu.</span>
+</div>
+
+<script>
+(function(){
+  const root=document.getElementById('payroll-income-config'); if(!root) return;
+  const $=(s)=>document.querySelector(s);
+
+  const METHOD = {
+    heso:"Hệ số × mức lương",
+    chucdanh:"Theo bảng chức danh",
+    codinh:"Số tiền cố định",
+    phantram:"% theo lương cơ bản",
+    dinhmuc:"Định mức (miễn thuế tới hạn)",
+    nhaptay:"Nhập tay theo kỳ",
+    congthuc:"Theo công thức / rule",
+  };
+
+  const DEFAULT_DATA = [
+    [1,"Lương định suất USD","fixed","heso",true,true,true],
+    [2,"Lương / phụ cấp chức danh","fixed","chucdanh",true,true,true],
+    [3,"Phụ cấp trách nhiệm","fixed","codinh",true,true,true],
+    [4,"Phụ cấp chức vụ","fixed","codinh",true,false,true],
+    [5,"Phụ cấp điện thoại","fixed","dinhmuc",false,false,true],
+    [6,"Phụ cấp xăng xe","fixed","dinhmuc",false,false,true],
+    [7,"Phụ cấp ăn trưa","fixed","dinhmuc",false,false,true],
+    [8,"Thưởng ABC / thưởng khác","var","nhaptay",true,false,true],
+    [9,"Thưởng sáng kiến","var","nhaptay",true,false,true],
+    [10,"Thưởng lễ, tết","var","nhaptay",true,false,true],
+    [11,"Tiền làm thêm giờ (OT - giai đoạn 2)","var","congthuc",true,false,false],
+    [12,"Truy lĩnh lương","var","nhaptay",true,false,false],
+  ];
+
+  let DATA = [];
+  try {
+    const stored = localStorage.getItem('mkc_income_config');
+    if (stored) {
+      DATA = JSON.parse(stored);
+    } else {
+      DATA = DEFAULT_DATA;
+      localStorage.setItem('mkc_income_config', JSON.stringify(DATA));
+    }
+  } catch (e) {
+    DATA = DEFAULT_DATA;
+  }
+  let nextId = DATA.length ? Math.max(...DATA.map(r => r[0])) + 1 : 13;
+
+  Object.entries(METHOD).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v; $('#m-method').appendChild(o); });
+
+  function sw(id,field,checked){ return `<span class="switch"><input type="checkbox" data-id="${id}" data-f="${field}" ${checked?'checked':''}><span class="slider"></span></span>`; }
+
+  function render(){
+    const draw=(grp,bodyId)=>{
+      const rows=DATA.filter(d=>d[2]===grp);
+      $('#'+bodyId).innerHTML = rows.length ? rows.map(d=>`
+        <tr class="hover:bg-slate-50 ${d[6]?'':'opacity-50'}">
+          <td class="px-4 py-3 font-semibold text-slate-800">${d[1]}</td>
+          <td class="px-4 py-3"><span class="bg-slate-100 text-slate-600 text-xs font-medium px-2.5 py-1 rounded-md">${METHOD[d[3]]}</span></td>
+          <td class="px-4 py-3 text-center">${sw(d[0],4,d[4])}</td>
+          <td class="px-4 py-3 text-center">${sw(d[0],5,d[5])}</td>
+          <td class="px-4 py-3 text-center">${sw(d[0],6,d[6])}</td>
+          <td class="px-4 py-3 text-center"><button data-del="${d[0]}" class="del text-slate-400 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`).join('') : `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">Chưa có thành phần.</td></tr>`;
+    };
+    draw('fixed','fixed-body'); draw('var','var-body');
+
+    root.querySelectorAll('input[data-f]').forEach(c=> c.onchange=()=>{ 
+      const d=DATA.find(x=>x[0]==c.dataset.id); 
+      if(d){ 
+        d[+c.dataset.f]=c.checked; 
+        try { localStorage.setItem('mkc_income_config', JSON.stringify(DATA)); } catch (e) {}
+        if(c.dataset.f==='6') render(); 
+      } 
+    });
+    root.querySelectorAll('.del').forEach(b=> b.onclick=()=>{ 
+      DATA=DATA.filter(x=>x[0]!=b.dataset.del); 
+      try { localStorage.setItem('mkc_income_config', JSON.stringify(DATA)); } catch (e) {}
+      render(); 
+    });
+  }
+
+  const modal=$('#modal');
+  $('#btn-add').onclick=()=>{ modal.classList.remove('hidden'); modal.classList.add('flex'); };
+  const closeM=()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  $('#m-close').onclick=closeM; $('#m-cancel').onclick=closeM; modal.onclick=(e)=>{ if(e.target===modal) closeM(); };
+  $('#m-save').onclick=()=>{
+    const name=$('#m-name').value.trim(); if(!name) return;
+    DATA.push([nextId++, name, $('#m-group').value, $('#m-method').value, $('#m-tax').checked, $('#m-bhxh').checked, true]);
+    try { localStorage.setItem('mkc_income_config', JSON.stringify(DATA)); } catch (e) {}
+    $('#m-name').value=''; closeM(); render();
+  };
+
+  function toast(m){ $('#toast-msg').textContent=' '+m; const t=$('#toast'); t.style.opacity='1'; t.style.transform='translateY(0)'; setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(8px)'; },1700); }
+  $('#btn-save').onclick=()=>{ 
+    try { localStorage.setItem('mkc_income_config', JSON.stringify(DATA)); } catch (e) {}
+    toast('Đã lưu cấu hình cơ cấu thu nhập.');
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

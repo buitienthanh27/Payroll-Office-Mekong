@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lịch sử biến động lương - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome: bỏ qua nếu file menu đã nạp sẵn -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+</head>
+<!-- Khi include vào menu: chỉ lấy phần <section id="payroll-salary-history"> và <script> cuối -->
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-salary-history" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-2 text-sm text-slate-500">
+      <a href="ho-so-chi-tiet-nhan-vien.html" class="hover:text-brand"><i class="fa-solid fa-arrow-left"></i> Hồ sơ chi tiết</a>
+      <span class="text-slate-300">/</span>
+      <span class="text-slate-700 font-medium">Lịch sử biến động lương</span>
+    </div>
+    <button class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+      <i class="fa-solid fa-file-excel"></i> Xuất Excel
+    </button>
+  </div>
+
+  <!-- Thẻ nhân viên + thống kê -->
+  <div id="emp-header-card" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-wrap items-center gap-5">
+    <!-- Sẽ render động bằng JS -->
+  </div>
+
+  <!-- Bộ lọc -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-3">
+    <span class="text-sm font-semibold text-slate-600 mr-1">Lọc:</span>
+    <select id="f-type" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+      <option value="">Tất cả loại biến động</option>
+      <option value="tang">Tăng lương</option>
+      <option value="nangbac">Nâng bậc</option>
+      <option value="dieuchuyen">Điều chuyển</option>
+      <option value="dieuchinh">Điều chỉnh hệ số</option>
+    </select>
+    <select id="f-year" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+      <option value="">Tất cả năm</option>
+    </select>
+    <button id="f-reset" class="text-sm text-slate-500 hover:text-brand px-3 py-2 flex items-center gap-1.5"><i class="fa-solid fa-arrow-rotate-left"></i> Đặt lại</button>
+  </div>
+
+  <!-- Timeline -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <div id="timeline" class="relative pl-8 border-l-2 border-slate-100 space-y-7"></div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  if (!CFG) return;
+
+  const code = localStorage.getItem('selected_emp_code') || 'VP001';
+  const emp = CFG.payrollRows.find(e => e.code === code) || CFG.payrollRows[0];
+  if (!emp) return;
+
+  // Lấy chữ cái viết tắt của tên
+  const nameParts = emp.name.trim().split(' ');
+  const initials = (nameParts[nameParts.length-2]?.[0]||'') + (nameParts[nameParts.length-1]?.[0]||'');
+
+  // Xác định ngày vào làm & chức danh
+  const getJoinInfo = (c) => {
+    if (c === 'VP001') return { date: '15/05/2010', pos: 'Giám đốc' };
+    if (c === 'VP002') return { date: '20/08/2012', pos: 'Phó Giám đốc' };
+    if (c === 'VP010') return { date: '01/03/2015', pos: 'Trưởng phòng TCHC' };
+    if (c === 'VP021') return { date: '10/01/2018', pos: 'Kế toán trưởng' };
+    if (c === 'VP033') return { date: '12/11/2017', pos: 'Trưởng phòng QLCL' };
+    return { date: '01/03/2015', pos: 'Chuyên viên' };
+  };
+  const joinInfo = getJoinInfo(emp.code);
+
+  const rateVND = 24500;
+  const fmtUSD = (n) => Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+  const fmtVND = (n) => Number(n||0).toLocaleString('vi-VN') + ' đ';
+
+  // Lịch sử biến động lương giả lập động dựa trên thông số nhân viên trong config
+  const HISTORIES = {
+    "VP001": [
+      ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo bảng hệ số mới năm 2026.", 1480, 1580, 5.03, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+      ["01/07/2024", "nangbac", "Nâng bậc lương", "Nâng bậc quản lý cao cấp bậc 2.", 1300, 1480, 4.71, "QĐ 145/QĐ-TCHC", "Tổng Giám đốc"],
+      ["01/03/2020", "dieuchuyen", "Bổ nhiệm Giám đốc", "Bổ nhiệm vị trí Giám đốc điều hành VRG Mekong.", 1100, 1300, 4.15, "QĐ 99/QĐ-TCHC", "Hội đồng Quản trị"],
+      ["15/05/2010", "dieuchinh", "Tuyển dụng - Lương khởi điểm", "Bắt đầu làm việc tại Ban Giám đốc.", 0, 800, 3.25, "HĐLĐ 2010/012", "Hội đồng Quản trị"]
+    ],
+    "VP002": [
+      ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo bảng hệ số mới năm 2026.", 1280, 1380, 4.45, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+      ["01/07/2024", "nangbac", "Nâng bậc lương", "Nâng bậc quản lý bậc 1.", 1150, 1280, 4.12, "QĐ 145/QĐ-TCHC", "Tổng Giám đốc"],
+      ["20/08/2012", "dieuchinh", "Tuyển dụng - Lương khởi điểm", "Bắt đầu làm việc tại Ban Giám đốc.", 0, 750, 2.85, "HĐLĐ 2012/045", "Tổng Giám đốc"]
+    ],
+    "VP010": [
+      ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo hệ số năm 2026.", 720, 780, 2.50, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+      ["01/07/2024", "nangbac", "Nâng bậc lương", "Nâng bậc Chuyên viên bậc 2.", 650, 720, 2.30, "QĐ 145/QĐ-TCHC", "TGĐ"],
+      ["01/03/2015", "dieuchinh", "Tuyển dụng - Lương khởi điểm", "Bắt đầu làm việc tại Phòng TCHC.", 0, 450, 1.85, "HĐLĐ 2015/078", "TP. TCHC"]
+    ],
+    "VP021": [
+      ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo hệ số năm 2026.", 580, 620, 2.10, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+      ["10/01/2018", "dieuchinh", "Tuyển dụng - Lương khởi điểm", "Bắt đầu làm việc tại Phòng Tài chính Kế toán.", 0, 380, 1.50, "HĐLĐ 2018/002", "TP. TCHC"]
+    ],
+    "VP033": [
+      ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo hệ số năm 2026.", 480, 520, 1.85, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+      ["12/11/2017", "dieuchinh", "Tuyển dụng - Lương khởi điểm", "Bắt đầu làm việc tại Phòng QLCL.", 0, 320, 1.30, "HĐLĐ 2017/099", "TP. TCHC"]
+    ]
+  };
+
+  const LOG = HISTORIES[emp.code] || [
+    ["01/01/2026", "tang", "Tăng lương định kỳ", "Điều chỉnh mức lương cơ bản theo hệ số năm 2026.", Math.round(emp.baseSalary * 0.9), emp.baseSalary, emp.coefficient, "QĐ 02/QĐ-TL", "Tổng Giám đốc"],
+    [joinInfo.date, "dieuchinh", "Tuyển dụng - Lương khởi điểm", `Bắt đầu làm việc tại ${emp.department}.`, 0, Math.round(emp.baseSalary * 0.6), emp.coefficient * 0.7, `HĐLĐ ${joinInfo.date.slice(-4)}/001`, "TP. TCHC"]
+  ];
+
+  const startSalary = LOG[LOG.length - 1][5];
+  const increasePercent = startSalary > 0 ? Math.round((emp.baseSalary - startSalary) / startSalary * 100) : 0;
+
+  // Render Header Card
+  document.getElementById('emp-header-card').innerHTML = `
+    <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-brand flex items-center justify-center text-xl font-extrabold shrink-0">${initials}</div>
+    <div class="flex-1 min-w-[180px]">
+      <h1 class="text-xl font-bold text-slate-800">${emp.name}</h1>
+      <p class="text-sm text-slate-500">
+        <span class="font-mono font-semibold text-brand">${emp.code}</span> · ${joinInfo.pos} · ${emp.department}
+      </p>
+    </div>
+    <div class="grid grid-cols-3 gap-x-8 gap-y-2 text-sm">
+      <div>
+        <p class="text-slate-400">Lương hiện tại</p>
+        <p class="font-bold text-brand">${fmtUSD(emp.baseSalary)}</p>
+        <p class="text-xs text-slate-400 font-medium">~${fmtVND(emp.baseSalary * rateVND)}</p>
+      </div>
+      <div>
+        <p class="text-slate-400">Số lần điều chỉnh</p>
+        <p class="font-bold text-slate-800">${LOG.length} lần</p>
+        <p class="text-xs text-slate-400">Từ lúc vào làm</p>
+      </div>
+      <div>
+        <p class="text-slate-400">Tăng so với khởi điểm</p>
+        <p class="font-bold text-emerald-600">+${increasePercent}%</p>
+        <p class="text-xs text-slate-400">Mốc ${joinInfo.date}</p>
+      </div>
+    </div>
+  `;
+
+  const META = {
+    tang:       ["Tăng lương", "fa-arrow-trend-up", "bg-emerald-100 text-emerald-600", "border-emerald-400"],
+    nangbac:    ["Nâng bậc", "fa-stairs", "bg-blue-100 text-blue-600", "border-blue-400"],
+    dieuchuyen: ["Điều chuyển", "fa-people-arrows", "bg-purple-100 text-purple-600", "border-purple-400"],
+    dieuchinh:  ["Điều chỉnh", "fa-sliders", "bg-amber-100 text-amber-600", "border-amber-400"],
+  };
+
+  const tl = document.getElementById('timeline'),
+        fType = document.getElementById('f-type'),
+        fYear = document.getElementById('f-year'),
+        fReset = document.getElementById('f-reset');
+
+  // Đổ các năm vào filter
+  const years = [...new Set(LOG.map(r => r[0].slice(-4)))];
+  fYear.innerHTML = '<option value="">Tất cả năm</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = 'Năm ' + y;
+    fYear.appendChild(o);
+  });
+
+  function render(){
+    const t = fType.value, y = fYear.value;
+    const rows = LOG.filter(r => (!t || r[1] === t) && (!y || r[0].slice(-4) === y));
+    tl.innerHTML = rows.length ? rows.map(r => {
+      const [date, type, title, desc, old, neu, hs, qd, by] = r;
+      const [label, icon, chip, bdr] = META[type];
+      const diff = neu - old;
+      
+      const diffPercent = old > 0 ? Math.round(diff / old * 100) : 0;
+      const diffHtml = old ? `
+        <span class="font-bold text-emerald-600 font-medium ml-1">
+          (+${fmtUSD(diff)} ~ +${diffPercent}%)
+        </span>
+      ` : '';
+
+      const oldSalaryHtml = old ? `${fmtUSD(old)} (~${fmtVND(old * rateVND)})` : '—';
+      const newSalaryHtml = `${fmtUSD(neu)} (~${fmtVND(neu * rateVND)})`;
+
+      return `
+        <div class="relative">
+          <span class="absolute -left-[42px] top-0 w-8 h-8 rounded-full ${chip} flex items-center justify-center ring-4 ring-white shadow-sm"><i class="fa-solid ${icon} text-sm"></i></span>
+          <div class="bg-slate-50 border-l-4 ${bdr} rounded-xl p-5 hover:shadow-md transition-shadow">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-slate-800 text-base">${title}</h3>
+                <span class="${chip} text-xs font-bold px-2 py-0.5 rounded-full">${label}</span>
+              </div>
+              <span class="text-sm font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md"><i class="fa-regular fa-calendar mr-1"></i>${date}</span>
+            </div>
+            <p class="text-sm text-slate-600 mb-4 font-medium">${desc}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs bg-white p-3 rounded-lg border border-slate-100">
+              <div>
+                <p class="text-slate-400 uppercase tracking-wider mb-0.5">Lương cũ</p>
+                <p class="font-semibold text-slate-700">${oldSalaryHtml}</p>
+              </div>
+              <div>
+                <p class="text-slate-400 uppercase tracking-wider mb-0.5">Lương mới</p>
+                <p class="font-bold text-brand">${newSalaryHtml}${diffHtml}</p>
+              </div>
+              <div>
+                <p class="text-slate-400 uppercase tracking-wider mb-0.5">Hệ số & Quyết định</p>
+                <p class="font-semibold text-slate-700">Hệ số ${hs.toFixed(2)} · ${qd}</p>
+              </div>
+              <div>
+                <p class="text-slate-400 uppercase tracking-wider mb-0.5">Người duyệt</p>
+                <p class="font-semibold text-slate-700">${by}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') : `<p class="text-slate-400 text-sm -ml-4">Không có biến động phù hợp bộ lọc.</p>`;
+  }
+
+  [fType, fYear].forEach(el => el.addEventListener('change', render));
+  fReset.onclick = () => { fType.value = ''; fYear.value = ''; render(); };
+  render();
+})();
+</script>
+</body>
+</html>

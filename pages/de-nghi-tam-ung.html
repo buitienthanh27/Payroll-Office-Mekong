@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đề nghị tạm ứng lương - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-advance" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Đề nghị tạm ứng lương</h1>
+      <p class="text-sm text-slate-500 mt-1">Quản lý các khoản ứng lương trong kỳ — tự động hoàn trừ vào bảng lương.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button id="btn-new" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-plus"></i> Tạo đề nghị</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-amber-400">
+      <p class="text-sm text-slate-500 font-medium">Chờ duyệt</p><h3 class="text-2xl font-extrabold text-amber-500 mt-1" id="s-pending">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Đã duyệt (kỳ T05)</p><h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="s-approved">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tổng đã ứng</p><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="s-total">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Chưa hoàn ứng</p><h3 class="text-xl font-extrabold text-red-500 mt-1" id="s-unpaid">0</h3></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+      <div class="relative flex-1 min-w-[200px]">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+      </div>
+      <select id="f-status" class="inp bg-white text-sm">
+        <option value="">Tất cả trạng thái</option>
+        <option value="pending">Chờ duyệt</option>
+        <option value="approved">Đã duyệt</option>
+        <option value="rejected">Từ chối</option>
+        <option value="repaid">Đã hoàn ứng</option>
+      </select>
+      <select id="f-ky" class="inp bg-white text-sm">
+        <option value="">Tất cả kỳ</option>
+        <option value="05/2026">Tháng 05/2026</option>
+        <option value="04/2026">Tháng 04/2026</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3">Nhân viên</th><th class="px-4 py-3">Kỳ lương</th>
+            <th class="px-4 py-3 text-right">Số tiền ứng</th><th class="px-4 py-3">Lý do</th>
+            <th class="px-4 py-3">Ngày đề nghị</th><th class="px-4 py-3 text-center">Trạng thái</th>
+            <th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 transition-all">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg transform transition-all">
+    <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-brand"></i> Tạo đề nghị tạm ứng</h3>
+      <button id="m-close" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="p-6 space-y-5">
+      <div>
+        <label class="text-sm font-semibold text-slate-700 block mb-1">Nhân viên</label>
+        <select id="m-emp" class="inp w-full bg-slate-50 focus:bg-white transition-colors"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-semibold text-slate-700 block mb-1">Kỳ lương hoàn ứng</label>
+          <select id="m-ky" class="inp w-full bg-slate-50 focus:bg-white transition-colors"><option>05/2026</option><option>06/2026</option></select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700 block mb-1">Số tiền ứng (USD)</label>
+          <input id="m-amt" type="number" value="100" min="10" step="10" class="inp w-full font-bold text-slate-800 bg-slate-50 focus:bg-white transition-colors" />
+        </div>
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-slate-700 block mb-1">Lý do đề nghị</label>
+        <textarea id="m-reason" rows="3" class="inp w-full bg-slate-50 focus:bg-white transition-colors resize-none" placeholder="VD: Chi phí y tế đột xuất, sửa chữa nhà cửa..."></textarea>
+      </div>
+      <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <div class="text-xs">
+          <p class="font-bold mb-0.5">Quy định tạm ứng:</p>
+          <p>Mức tạm ứng tối đa là 50% lương cơ bản của kỳ hiện tại. Tiền tạm ứng sẽ tự động cấn trừ vào đợt thanh toán lương tương ứng.</p>
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+      <button id="m-cancel" class="text-sm border border-slate-200 bg-white px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 font-semibold transition-all shadow-sm">Hủy</button>
+      <button id="m-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-brand/30 flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Gửi duyệt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG || { payrollRows: [] };
+  const fmt=(n)=>(Number(n)||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+  const ST={ pending:['Chờ duyệt','bg-amber-100 text-amber-700'], approved:['Đã duyệt','bg-emerald-100 text-emerald-700'],
+    rejected:['Từ chối','bg-slate-200 text-slate-600'], repaid:['Đã hoàn ứng','bg-blue-100 text-blue-700'] };
+  
+  // 1. NẠP NHÂN VIÊN ĐỘNG TỪ BẢNG LƯƠNG
+  const EMP = (CFG.payrollRows || []).map(r => [r.code, r.name]);
+  
+  // 2. KHỞI TẠO DỮ LIỆU TẠM ỨNG MẪU NẾU CHƯA CÓ TRONG LOCALSTORAGE
+  let DATA = [];
+  try {
+    const stored = localStorage.getItem('mkc_advance_requests');
+    if (stored) DATA = JSON.parse(stored);
+  } catch(e) {}
+  
+  if (!DATA || !Array.isArray(DATA) || DATA.length === 0) {
+    DATA = [
+      [1,'VP010','Trần Thị Mỹ Hạnh','05/2026',60.00,'Chi phí y tế gia đình','15/05/2026','approved'],
+      [2,'VP033','Lê Minh Kha','05/2026',80.00,'Ứng trước chi phí công tác','18/05/2026','approved'],
+      [3,'VP021','Sok Dara','05/2026',100.00,'Sửa chữa nhà ở','22/05/2026','pending'],
+      [4,'VP002','Nguyễn Văn Toàn','04/2026',120.00,'Việc gia đình','10/04/2026','repaid'],
+      [5,'VP001','Đỗ Quốc Tuấn','04/2026',200.00,'Ứng mua sắm thiết bị VP','05/04/2026','repaid'],
+    ];
+    localStorage.setItem('mkc_advance_requests', JSON.stringify(DATA));
+  }
+  
+  let nextId = DATA.length ? (Math.max(...DATA.map(r => r[0])) + 1) : 6;
+  const body=document.getElementById('tbl-body');
+
+  // Gắn nhân viên vào dropdown
+  const mEmpSelect = document.getElementById('m-emp');
+  mEmpSelect.innerHTML = '';
+  EMP.forEach(e=>{ 
+    const o=document.createElement('option'); 
+    o.value=e[0]; 
+    o.textContent=e[1]+' ('+e[0]+')'; 
+    mEmpSelect.appendChild(o); 
+  });
+
+  // Nạp danh sách kỳ lương động từ Bảng lương tháng để lọc
+  const periodsData = JSON.parse(localStorage.getItem('mkc_payroll_periods')) || [];
+  const activePeriods = periodsData.length ? periodsData.map(r => r[1]) : ['01/2026', '02/2026', '05/2026', '04/2026'];
+  
+  const fKy = document.getElementById('f-ky');
+  fKy.innerHTML = '<option value="">Tất cả kỳ</option>';
+  [...new Set([...activePeriods, '04/2026', '05/2026'])].sort().reverse().forEach(ky => {
+    const o = document.createElement('option');
+    o.value = ky;
+    o.textContent = `Tháng ${ky}`;
+    fKy.appendChild(o);
+  });
+
+  // Nạp kỳ lương vào modal tạo mới
+  const mKySelect = document.getElementById('m-ky');
+  mKySelect.innerHTML = '';
+  [...new Set([...activePeriods, '05/2026', '06/2026'])].sort().reverse().forEach(ky => {
+    const o = document.createElement('option');
+    o.value = ky;
+    o.textContent = `Tháng ${ky}`;
+    mKySelect.appendChild(o);
+  });
+
+  function stats(){
+    const pendingCount = DATA.filter(r=>r[7]==='pending').length;
+    const currentPeriodApproved = DATA.filter(r=>r[7]==='approved'&&r[3]==='05/2026');
+    const allApproved = DATA.filter(r=>r[7]==='approved');
+
+    document.getElementById('s-pending').textContent=pendingCount;
+    document.getElementById('s-approved').textContent=currentPeriodApproved.length;
+    document.getElementById('s-total').textContent=fmt(allApproved.reduce((a,r)=>a+r[4],0));
+    document.getElementById('s-unpaid').textContent=fmt(allApproved.reduce((a,r)=>a+r[4],0));
+  }
+
+  function render(){
+    const q=document.getElementById('f-search').value.trim().toLowerCase();
+    const s=document.getElementById('f-status').value;
+    const ky=document.getElementById('f-ky').value;
+    const rows=DATA.filter(r=>(!q||r[1].toLowerCase().includes(q)||r[2].toLowerCase().includes(q))&&(!s||r[7]===s)&&(!ky||r[3]===ky));
+    
+    body.innerHTML=rows.length?rows.map(r=>{
+      const [sl,sc]=ST[r[7]];
+      const act=r[7]==='pending'?`<button data-id="${r[0]}" data-act="approved" class="act text-emerald-600 hover:bg-emerald-50 rounded-lg px-2.5 py-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
+        <button data-id="${r[0]}" data-act="rejected" class="act text-red-500 hover:bg-red-50 rounded-lg px-2.5 py-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>`:'';
+      return `<tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-4 py-3"><p class="font-semibold text-slate-800">${r[2]}</p><p class="text-xs text-slate-400 font-mono">${r[1]}</p></td>
+        <td class="px-4 py-3 text-slate-600 font-medium">Tháng ${r[3]}</td>
+        <td class="px-4 py-3 text-right font-bold text-slate-800">${fmt(r[4])}</td>
+        <td class="px-4 py-3 text-slate-500">${r[5]}</td>
+        <td class="px-4 py-3 text-slate-600 font-medium">${r[6]}</td>
+        <td class="px-4 py-3 text-center"><span class="${sc} text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">${sl}</span></td>
+        <td class="px-4 py-3 text-center whitespace-nowrap">${act}</td></tr>`;
+    }).join(''):`<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400">Không có đề nghị phù hợp.</td></tr>`;
+    
+    // Sự kiện phê duyệt/từ chối inline đã được loại bỏ, dùng event delegation
+  }
+
+  const modal=document.getElementById('modal');
+  const closeM=()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  
+  // EVENT DELEGATION GLOBAL
+  document.addEventListener('click', (e) => {
+    // Modal toggle
+    if (e.target.closest('#btn-new')) {
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+    if (e.target.closest('#m-close') || e.target.closest('#m-cancel')) {
+      closeM();
+    }
+    if (e.target === modal) {
+      closeM();
+    }
+
+    // Modal save
+    if (e.target.closest('#m-save')) {
+      const empCode = document.getElementById('m-emp').value;
+      const emp=CFG.payrollRows.find(e=>e.code===empCode);
+      const amt=+document.getElementById('m-amt').value||0;
+      const reason=document.getElementById('m-reason').value.trim()||'(Chưa nhập lý do)';
+      if(!emp||!amt) return;
+      const d=new Date(); const ds=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+      
+      DATA.unshift([nextId++, emp.code, emp.name, document.getElementById('m-ky').value, amt, reason, ds, 'pending']);
+      localStorage.setItem('mkc_advance_requests', JSON.stringify(DATA));
+      
+      closeM(); render(); stats();
+      
+      const noti = document.createElement('div');
+      noti.className = "fixed top-5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-xl z-50 flex items-center gap-2.5 animate-bounce";
+      noti.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã tạo đề nghị tạm ứng thành công và gửi cấp trên phê duyệt!`;
+      document.body.appendChild(noti);
+      setTimeout(() => noti.remove(), 2500);
+    }
+
+    // Action buttons (Approve / Reject)
+    const btnAct = e.target.closest('.act');
+    if (btnAct) {
+      const rId = btnAct.dataset.id;
+      const actType = btnAct.dataset.act;
+      const r = DATA.find(x => String(x[0]) === String(rId));
+      if (r) {
+        r[7] = actType;
+        localStorage.setItem('mkc_advance_requests', JSON.stringify(DATA));
+        render(); stats();
+        
+        const isApp = actType === 'approved';
+        const noti = document.createElement('div');
+        noti.className = `fixed top-5 left-1/2 -translate-x-1/2 ${isApp?'bg-emerald-600':'bg-red-600'} text-white font-bold px-6 py-3.5 rounded-xl shadow-xl z-50 flex items-center gap-2.5 animate-bounce`;
+        noti.innerHTML = `<i class="fa-solid ${isApp?'fa-circle-check':'fa-circle-xmark'}"></i> Đã ${isApp?'phê duyệt':'từ chối'} đề nghị tạm ứng của ${r[2]} thành công!`;
+        document.body.appendChild(noti);
+        setTimeout(() => noti.remove(), 2200);
+      }
+    }
+  });
+
+  ['f-search','f-status','f-ky'].forEach(id=> document.getElementById(id).addEventListener('input', render));
+  render(); stats();
+})();
+</script>
+</body>
+</html>

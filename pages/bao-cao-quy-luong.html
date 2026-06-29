@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PHÂN TOÁN - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>.inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; } .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; } .num{ font-variant-numeric:tabular-nums; }</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-fund-report" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">PHÂN TOÁN</h1>
+      <p class="text-sm text-slate-500 mt-1">Báo cáo đối soát workbook VP tháng 01/2026, USD là đơn vị chính.</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <select id="f-ky" class="inp bg-white text-sm" aria-label="Chọn kỳ" title="Chọn kỳ"><option>Tháng 01/2026</option><option>Tháng 02/2026</option><option>Tháng 03/2026</option></select>
+      <select id="f-scope" class="inp bg-white text-sm" aria-label="Chọn phạm vi" title="Chọn phạm vi"><option>Payroll VP Campuchia</option><option>Toàn công ty</option></select>
+      <button class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+    </div>
+  </div>
+
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex flex-wrap items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>Báo cáo lấy số từ kết quả tính lương và rule/version đang áp dụng, không nhập cứng số tổng trên UI. Workbook tháng 01/2026 là bộ đối soát.</span>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Tổng gross</p><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="s-gross">0</h3>
+      <p class="text-xs text-emerald-600 mt-1 font-semibold">Khớp PHAN TOAN</p></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Lương thời gian</p><h3 class="text-xl font-extrabold text-slate-700 mt-1" id="s-time">0</h3>
+      <p class="text-xs text-slate-400 mt-1">Cột F</p></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tiền ăn + nhà</p><h3 class="text-xl font-extrabold text-brand mt-1" id="s-allowance">0</h3>
+      <p class="text-xs text-slate-400 mt-1">Cột G + K</p></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">PIT mẫu</p><h3 class="text-xl font-extrabold text-red-500 mt-1" id="s-pit">0</h3>
+      <p class="text-xs text-slate-400 mt-1">Version PIT-KH-2026.01</p></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <h2 class="font-bold text-slate-800 mb-4">Cơ cấu TONG HOP</h2>
+      <div class="h-64 flex items-center justify-center"><canvas id="chart-pie"></canvas></div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <h2 class="font-bold text-slate-800 mb-4">Gross theo phòng ban (PHAN TOAN)</h2>
+      <div class="h-64"><canvas id="chart-bar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+      <i class="fa-solid fa-table text-brand"></i><h2 class="font-bold text-slate-800">PHAN TOAN - Phân bổ quỹ lương theo phòng ban</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3">Phòng ban</th><th class="px-4 py-3 text-center">NV</th>
+            <th class="px-4 py-3 text-right">Công</th><th class="px-4 py-3 text-right">Lương TG</th>
+            <th class="px-4 py-3 text-right">Tiền ăn</th><th class="px-4 py-3 text-right">Tiền nhà</th>
+            <th class="px-4 py-3 text-right">Nghỉ phép</th><th class="px-4 py-3 text-right">Lễ/Tết</th>
+            <th class="px-4 py-3 text-right">Thưởng</th><th class="px-4 py-3 text-right bg-emerald-50">Gross</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+        <tfoot class="bg-slate-50 font-bold"><tr id="tbl-foot"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  const usd=n=>Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money=n=>usd(n)+' USD';
+  const d=CFG.departments;
+  const t=CFG.totals;
+  document.getElementById('s-gross').textContent=money(t.gross);
+  document.getElementById('s-time').textContent=money(t.timeSalary);
+  document.getElementById('s-allowance').textContent=money(t.meal+t.house);
+  document.getElementById('s-pit').textContent=money(t.pit);
+
+  document.getElementById('tbl-body').innerHTML=d.map(r=>`
+    <tr class="hover:bg-slate-50">
+      <td class="px-4 py-2.5 font-semibold">${r.name}</td>
+      <td class="px-4 py-2.5 text-center">${r.employees}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.workDays)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.timeSalary)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.meal)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.house)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.leaveSalary)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.holidaySalary)}</td>
+      <td class="px-4 py-2.5 text-right num">${usd(r.holidayBonus)}</td>
+      <td class="px-4 py-2.5 text-right num font-bold text-brand bg-emerald-50/50">${usd(r.gross)}</td>
+    </tr>`).join('');
+  document.getElementById('tbl-foot').innerHTML=`<td class="px-4 py-3" colspan="2">Tổng cộng</td>
+    <td class="px-4 py-3 text-right num">${usd(d.reduce((a,r)=>a+r.workDays,0))}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.timeSalary)}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.meal)}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.house)}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.leaveSalary)}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.holidaySalary)}</td>
+    <td class="px-4 py-3 text-right num">${usd(t.holidayBonus)}</td>
+    <td class="px-4 py-3 text-right num text-brand bg-brand/10">${usd(t.gross)}</td>`;
+
+  new Chart(document.getElementById('chart-pie'),{
+    type:'doughnut',
+    data:{ labels:['Lương TG','Tiền ăn','Tiền nhà','Nghỉ phép','Lễ/Tết','Thưởng'],
+      datasets:[{ data:[t.timeSalary,t.meal,t.house,t.leaveSalary,t.holidaySalary,t.holidayBonus], backgroundColor:['#059669','#10b981','#34d399','#6ee7b7','#f59e0b','#fbbf24'] }] },
+    options:{ plugins:{ legend:{ position:'right' } }, maintainAspectRatio:false }
+  });
+  new Chart(document.getElementById('chart-bar'),{
+    type:'bar',
+    data:{ labels:d.map(x=>x.name), datasets:[{ label:'Gross USD', data:d.map(x=>x.gross), backgroundColor:'#10b981', borderRadius:6 }] },
+    options:{ scales:{ y:{ beginAtZero:true, title:{ display:true, text:'USD' } } }, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+  });
+})();
+</script>
+</body>
+</html>

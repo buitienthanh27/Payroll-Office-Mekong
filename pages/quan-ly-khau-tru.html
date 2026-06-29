@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quản lý khấu trừ lương - Tiền lương Khối Văn phòng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { brand: { light:'#34d399', DEFAULT:'#10b981', dark:'#059669' } } } } };
+</script>
+<style>
+  .inp{ border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .inp:focus{ box-shadow:0 0 0 2px #6ee7b7; border-color:#10b981; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-deduction" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Khấu trừ & tiền điện</h1>
+      <p class="text-sm text-slate-500 mt-1">Quản lý các khoản T/U/V/Z/AA/AB/AC/AJ trong bảng lương VP Campuchia.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="button" class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Xuất Excel</button>
+      <button id="btn-new" type="button" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2"><i class="fa-solid fa-plus"></i> Thêm khấu trừ</button>
+    </div>
+  </div>
+
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <b>Không hardcode:</b> loại khấu trừ, mã cột Excel, công thức tiền điện, nguồn dữ liệu và workflow duyệt đều được cấu hình theo kỳ lương.
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-brand">
+      <p class="text-sm text-slate-500 font-medium">Tổng khấu trừ mẫu</p><h3 class="text-xl font-extrabold text-red-500 mt-1" id="s-total">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tạm ứng</p><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="s-repay">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">CĐ phí & Khác</p><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="s-loan">0</h3></div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <p class="text-sm text-slate-500 font-medium">Tiền điện</p><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="s-disc">0</h3></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-bold text-slate-800">Nguồn nhập sheet Điện (OQ-017)</h2>
+        <p class="text-xs text-slate-500 mt-1">Dữ liệu điện được import/nhập tại đây. <b>Chỉ áp dụng cho nhân viên ở KTX có bill điện</b> · Miễn phí 20 kWh/người/tháng.</p>
+      </div>
+      <button class="text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-3 py-2 rounded-lg"><i class="fa-solid fa-upload"></i> Import sheet Điện</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-500 font-semibold">
+          <tr>
+            <th class="px-3 py-2">Nhân viên</th>
+            <th class="px-3 py-2 text-right">Số ký</th>
+            <th class="px-3 py-2 text-right">Miễn phí</th>
+            <th class="px-3 py-2 text-right">Tính tiền</th>
+            <th class="px-3 py-2 text-right">Đơn giá KHR</th>
+            <th class="px-3 py-2 text-right">Thành tiền USD</th>
+            <th class="px-3 py-2 text-center">Post lương</th>
+          </tr>
+        </thead>
+        <tbody id="electric-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+      <div class="relative flex-1 min-w-[200px]">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+      </div>
+      <select id="f-type" class="inp bg-white text-sm" aria-label="Loại khấu trừ">
+        <option value="">Tất cả loại</option>
+        <option value="ADVANCE">Tạm ứng</option>
+        <option value="OTHER_TAX">Thuế TN khác (V)</option>
+        <option value="UNION_FEE">CĐ phí</option>
+        <option value="VISA_WORK_PERMIT">Visa/Sổ LĐ</option>
+        <option value="UNION_HOUSE">Mái ấm CĐ</option>
+        <option value="ELECTRICITY">Tiền điện</option>
+      </select>
+      <select id="f-ky" class="inp bg-white text-sm" aria-label="Chọn kỳ">
+        <option value="01/2026">Tháng 01/2026</option>
+        <option value="02/2026">Tháng 02/2026</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600 font-medium">
+          <tr>
+            <th class="px-4 py-3">Nhân viên</th><th class="px-4 py-3">Loại khấu trừ</th>
+            <th class="px-4 py-3 text-center">Cột Excel</th>
+            <th class="px-4 py-3 text-right">Số tiền trừ kỳ này</th>
+            <th class="px-4 py-3 text-right">Còn lại</th>
+            <th class="px-4 py-3">Ghi chú</th>
+            <th class="px-4 py-3 text-center">Nguồn</th>
+            <th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-bold text-slate-800">Thêm khoản khấu trừ</h3>
+      <button id="m-close" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <label class="text-sm block">Nhân viên<select id="m-emp" class="inp w-full mt-1 bg-white"></select></label>
+      <label class="text-sm block">Loại khấu trừ<select id="m-type" class="inp w-full mt-1 bg-white"></select></label>
+      <label class="text-sm block">Số tiền trừ kỳ này (USD)<input id="m-amt" type="number" value="5" step="0.01" class="inp w-full mt-1" /></label>
+      <label class="text-sm block">Tổng còn lại (USD)<input id="m-remain" type="number" value="0" step="0.01" class="inp w-full mt-1" /></label>
+      <label class="text-sm block">Ghi chú<input id="m-note" type="text" class="inp w-full mt-1" placeholder="VD: Trừ góp vay ngân hàng tháng 5..." /></label>
+
+      <!-- OQ-007: Fields bổ sung cho Thuế TN khác (Cột V) -->
+      <div id="other-tax-fields" class="hidden space-y-3 p-3 bg-amber-50 border border-amber-100 rounded-lg mt-3">
+        <p class="text-xs text-amber-700 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Thuế TN khác (Cột V) - Nhập tay, cần duyệt</p>
+        <label class="text-sm block">File đính kèm (chứng từ)
+          <input id="m-attachment" type="file" class="inp w-full mt-1 bg-white text-xs" accept=".pdf,.jpg,.png" />
+        </label>
+        <label class="text-sm block">Người nhập
+          <input id="m-created-by" type="text" class="inp w-full mt-1 bg-slate-100" value="Kế toán lương" readonly />
+        </label>
+        <label class="text-sm block">Trạng thái duyệt
+          <select id="m-approval-status" class="inp w-full mt-1 bg-white">
+            <option value="pending">Chờ duyệt</option>
+            <option value="approved">Đã duyệt</option>
+            <option value="rejected">Từ chối</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="m-cancel" class="text-sm border border-slate-200 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-50">Hủy</button>
+      <button id="m-save" class="text-sm bg-brand hover:bg-brand-dark text-white font-semibold px-4 py-2 rounded-lg">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG || { payrollRows: [], deductionTypes: [], electricityRows: [] };
+  const fmt=(n)=>Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })+' USD';
+  const colorMap={
+    ADVANCE:'bg-blue-100 text-blue-700',
+    OTHER_TAX:'bg-red-100 text-red-700',  // OQ-007: Thuế TN khác
+    UNION_FEE:'bg-slate-100 text-slate-600',
+    VISA_WORK_PERMIT:'bg-purple-100 text-purple-700',
+    UNION_HOUSE:'bg-pink-100 text-pink-700',
+    ELECTRICITY:'bg-orange-100 text-orange-700'
+  };
+  const TYPES=Object.fromEntries((CFG.deductionTypes || []).map(t=>[t.code,t]));
+  const EMP=(CFG.payrollRows || []).map(r=>[r.code,r.name]);
+  
+  // 1. Đồng bộ dữ liệu Khấu trừ
+  const getDeductionData = () => {
+    try {
+      const stored = localStorage.getItem('mkc_deductions_data');
+      if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    
+    let defaultData=[];
+    (CFG.payrollRows || []).forEach((r, idx)=>{
+      const base = [
+        ['ADVANCE', r.advance, 0, 'Tạm ứng đã duyệt', 'Đề nghị'],
+        ['UNION_FEE', r.unionFee, 0, 'CĐ phí', 'Cấu hình'],
+        ['VISA_WORK_PERMIT', r.visaWorkPermit, 0, 'Visa/Sổ LĐ', 'Hồ sơ'],
+        ['UNION_HOUSE', r.unionHouse, 0, 'Mái ấm CĐ', 'Cấu hình'],
+        ['ELECTRICITY', r.electricity, 0, 'Tiền điện đã post từ sheet Điện', 'Sheet Điện']
+      ].filter(x=>x[1] > 0);
+      base.forEach((x, i)=> defaultData.push([idx*20+i+1, r.code, r.name, x[0], x[1], x[2], x[3], x[4], '01/2026']));
+    });
+    localStorage.setItem('mkc_deductions_data', JSON.stringify(defaultData));
+    return defaultData;
+  };
+  
+  const saveDeductionData = (d) => localStorage.setItem('mkc_deductions_data', JSON.stringify(d));
+  let DATA = getDeductionData();
+  let nextId = DATA.length ? Math.max(...DATA.map(r=>r[0])) + 1 : 1;
+
+  // 2. Đồng bộ dữ liệu Tiền điện
+  const getElectricityData = () => {
+    try {
+      const stored = localStorage.getItem('mkc_electricity_data');
+      if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    const defaultElec = CFG.electricityRows || [];
+    localStorage.setItem('mkc_electricity_data', JSON.stringify(defaultElec));
+    return defaultElec;
+  };
+  const saveElectricityData = (d) => localStorage.setItem('mkc_electricity_data', JSON.stringify(d));
+
+  const body=document.getElementById('tbl-body');
+
+  EMP.forEach(e=>{ const o=document.createElement('option'); o.value=e[0]; o.textContent=e[1]+' ('+e[0]+')'; document.getElementById('m-emp').appendChild(o); });
+  // OQ-007: Thêm OTHER_TAX vào danh sách loại khấu trừ
+  const allowedModalTypes = ['ADVANCE', 'OTHER_TAX', 'UNION_FEE', 'VISA_WORK_PERMIT', 'UNION_HOUSE', 'ELECTRICITY'];
+  (CFG.deductionTypes || []).filter(t => allowedModalTypes.includes(t.code)).forEach(t=>{ const o=document.createElement('option'); o.value=t.code; o.textContent=t.name+' ('+t.column+')'; document.getElementById('m-type').appendChild(o); });
+
+  // OQ-007: Show/hide fields bổ sung cho Thuế TN khác
+  document.getElementById('m-type').onchange = function() {
+    const otherTaxFields = document.getElementById('other-tax-fields');
+    if (this.value === 'OTHER_TAX') {
+      otherTaxFields.classList.remove('hidden');
+    } else {
+      otherTaxFields.classList.add('hidden');
+    }
+  };
+
+  function stats(){
+    const rows=DATA.filter(r=>r[8]==='01/2026');
+    document.getElementById('s-total').textContent=fmt(rows.reduce((a,r)=>a+r[4],0));
+    document.getElementById('s-repay').textContent=fmt(rows.filter(r=>r[3]==='ADVANCE').reduce((a,r)=>a+r[4],0));
+    document.getElementById('s-loan').textContent=fmt(rows.filter(r=>['UNION_FEE','VISA_WORK_PERMIT','UNION_HOUSE'].includes(r[3])).reduce((a,r)=>a+r[4],0));
+    const elecRows = getElectricityData();
+    document.getElementById('s-disc').textContent=fmt(elecRows.reduce((a,r)=>a+Number(r.amountUsd||0),0));
+  }
+
+  function renderSources(){
+    const electricBody=document.getElementById('electric-body');
+    const elecRows = getElectricityData();
+    const pRows = CFG.payrollRows || [];
+    electricBody.innerHTML=elecRows.map(r=>{
+      const payrollRow=pRows.find(x=>x.code===r.code);
+      const posted=Number(payrollRow?.electricity||0) > 0;
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-3 py-2"><p class="font-semibold text-slate-800">${r.name}</p><p class="text-[11px] text-slate-400">${r.code}</p></td>
+        <td class="px-3 py-2 text-right font-mono">${r.kw}</td>
+        <td class="px-3 py-2 text-right font-mono">${r.freeKw}</td>
+        <td class="px-3 py-2 text-right font-mono">${r.billableKw}</td>
+        <td class="px-3 py-2 text-right font-mono">${Number(r.unitPriceKHR||0).toLocaleString('en-US')}</td>
+        <td class="px-3 py-2 text-right font-mono text-orange-600">${fmt(r.amountUsd).replace(' USD','')}</td>
+        <td class="px-3 py-2 text-center">${posted
+          ? '<span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-1 rounded-full">Đã post</span>'
+          : '<span class="text-xs bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded-full">Đối soát</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function render(){
+    const q=document.getElementById('f-search').value.trim().toLowerCase();
+    const t=document.getElementById('f-type').value;
+    const ky=document.getElementById('f-ky').value;
+    const rows=DATA.filter(r=>(!q||r[1].toLowerCase().includes(q)||r[2].toLowerCase().includes(q))&&(!t||r[3]===t)&&r[8]===ky);
+    body.innerHTML=rows.length?rows.map(r=>{
+      const type=TYPES[r[3]] || { name:r[3], column:'-', source:'Cấu hình' };
+      const tc=colorMap[r[3]] || 'bg-slate-100 text-slate-600';
+      const del=r[7]==='Thủ công'?`<button data-del="${r[0]}" class="del text-slate-400 hover:text-red-500 px-2"><i class="fa-solid fa-trash"></i></button>`:'';
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-3"><p class="font-semibold text-slate-800">${r[2]}</p><p class="text-xs text-slate-400">${r[1]}</p></td>
+        <td class="px-4 py-3"><span class="${tc} text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap">${type.name}</span></td>
+        <td class="px-4 py-3 text-center font-mono text-xs text-slate-500">${type.column}</td>
+        <td class="px-4 py-3 text-right font-bold text-red-500">${fmt(r[4])}</td>
+        <td class="px-4 py-3 text-right text-slate-600">${r[5]?fmt(r[5]):'—'}</td>
+        <td class="px-4 py-3 text-slate-500">${r[6]}</td>
+        <td class="px-4 py-3 text-center"><span class="text-xs ${r[7]==='Thủ công'?'text-slate-400':'text-brand font-semibold'}">${r[7]}</span></td>
+        <td class="px-4 py-3 text-center">${del}</td></tr>`;
+    }).join(''):`<tr><td colspan="8" class="px-4 py-10 text-center text-slate-400">Không có khoản khấu trừ.</td></tr>`;
+  }
+
+  const modal=document.getElementById('modal');
+  const closeM=()=>{ modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  
+  // Nút Import Sheet Điện
+  const btnImportElec = document.querySelector('button i.fa-upload').closest('button');
+  if (btnImportElec) {
+    btnImportElec.onclick = () => {
+      alert("Đã nhận lệnh Import dữ liệu tiền điện từ file Excel. Hệ thống sẽ đồng bộ và tính toán lại.");
+      // Giả lập thêm dữ liệu
+      const elecRows = getElectricityData();
+      if (!elecRows.find(x => x.code === 'VP010')) {
+        elecRows.push({ code: "VP010", name: "Trần Thị Mỹ Hạnh", kw: 80, freeKw: 20, billableKw: 60, unitPriceKHR: 1000, amountUsd: 15.0 });
+        saveElectricityData(elecRows);
+        renderSources();
+        stats();
+      }
+    };
+  }
+  
+  document.addEventListener('click', (e) => {
+    // Delete deduction
+    const btnDel = e.target.closest('.del');
+    if (btnDel) {
+      if (confirm("Bạn có chắc muốn xóa khoản khấu trừ này?")) {
+        DATA=DATA.filter(x=>x[0]!=btnDel.dataset.del); 
+        saveDeductionData(DATA);
+        render(); stats();
+      }
+    }
+
+    // Modal toggles
+    if (e.target.closest('#btn-new')) {
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+    if (e.target.closest('#m-close') || e.target.closest('#m-cancel')) {
+      closeM();
+    }
+    if (e.target === modal) {
+      closeM();
+    }
+
+    // Save deduction
+    if (e.target.closest('#m-save')) {
+      const emp=EMP.find(x=>x[0]===document.getElementById('m-emp').value);
+      const type=document.getElementById('m-type').value;
+      const amt=+document.getElementById('m-amt').value||0;
+      const remain=+document.getElementById('m-remain').value||0;
+      const note=document.getElementById('m-note').value.trim()||'';
+      if(!emp||!amt) return;
+      DATA.unshift([nextId++, emp[0], emp[1], type, amt, remain, note, 'Thủ công', document.getElementById('f-ky').value]);
+      saveDeductionData(DATA);
+      closeM(); render(); stats();
+    }
+  });
+
+  ['f-search','f-type','f-ky'].forEach(id=> document.getElementById(id).addEventListener('change', render));
+  document.getElementById('f-search').addEventListener('input', render);
+  renderSources(); render(); stats();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quản lý nghỉ phép - Tiền lương Khối Văn phòng</title>
+<!-- Tailwind / FontAwesome -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="payroll-vp-config.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            light: '#34d399',
+            DEFAULT: '#10b981',
+            dark: '#059669',
+            bg: '#F6FBF7',
+            deep: '#006B3F',
+            accent: '#009344'
+          }
+        }
+      }
+    }
+  };
+</script>
+<style>
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  /* Thiết kế tooltip nhẹ nhàng cho lưới lịch */
+  .tooltip-trigger:hover .tooltip-content {
+    display: block;
+  }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+<section id="payroll-leave" class="p-6 max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Tiêu đề -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Quản lý nghỉ phép</h1>
+      <p class="text-sm text-slate-500 mt-1">Khối văn phòng · Năm 2026 · Nhận diện Mekong Rubber</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Nút Đăng ký nghỉ phép nổi bật Emerald -->
+      <button id="btn-open-register" class="bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all">
+        <i class="fa-solid fa-plus"></i> Đăng ký nghỉ phép
+      </button>
+      <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-file-excel"></i> Xuất Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- Ghi chú nguồn dữ liệu -->
+  <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>Màn hình hỗ trợ <b>nhân viên tự đăng ký nghỉ phép</b> và <b>quản lý duyệt đơn nhanh</b> để tự động đồng bộ dữ liệu vào kỳ tính lương.</span>
+  </div>
+
+  <!-- CẤU HÌNH & QUY TẮC DỒN NGHỈ -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Cột 1: Cấu hình tuần làm việc -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+      <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+        <div class="p-2 bg-emerald-50 text-brand rounded-lg">
+          <i class="fa-solid fa-calendar-days text-lg"></i>
+        </div>
+        <h3 class="font-bold text-slate-800">Cấu hình lịch làm việc</h3>
+      </div>
+      <div class="space-y-3">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Số ngày làm việc trong tuần</label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex flex-col items-center justify-center p-2.5 border rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-center select-none" id="label-week-6">
+            <input type="radio" name="workWeekMode" value="6" class="sr-only" />
+            <span class="text-sm font-bold text-slate-700">6 ngày</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">Nghỉ Chủ Nhật</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2.5 border rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-center select-none" id="label-week-55">
+            <input type="radio" name="workWeekMode" value="5.5" class="sr-only" />
+            <span class="text-sm font-bold text-slate-700">5.5 ngày</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">Nghỉ T7(chiều) + CN</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2.5 border rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-center select-none" id="label-week-5">
+            <input type="radio" name="workWeekMode" value="5" class="sr-only" />
+            <span class="text-sm font-bold text-slate-700">5 ngày</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">Nghỉ T7 + CN</span>
+          </label>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-600">
+          <div class="flex justify-between">
+            <span>Tháng áp dụng:</span>
+            <span class="font-semibold text-slate-800">Tháng 01/2026</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Tổng số ngày trong tháng:</span>
+            <span class="font-semibold text-slate-800">31 ngày</span>
+          </div>
+          <div class="flex justify-between pb-1 border-b border-dashed border-slate-200">
+            <span>Chế độ tuần làm việc:</span>
+            <span class="font-semibold text-brand" id="cfg-week-desc">6 ngày/tuần</span>
+          </div>
+          <div class="flex justify-between pt-1 font-semibold text-slate-700">
+            <span>Số ngày nghỉ tiêu chuẩn:</span>
+            <span class="text-emerald-600 text-sm" id="cfg-standard-off">4 ngày</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cột 2: Tích lũy dồn nghỉ chủ nhật của nhân viên -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="p-2 bg-amber-50 text-amber-600 rounded-lg">
+            <i class="fa-solid fa-cubes text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800">Quy tắc dồn nghỉ Chủ nhật</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Nhân viên được dồn tối đa <b>4 ngày nghỉ Chủ nhật</b> tích lũy để nghỉ 1 lần</p>
+          </div>
+        </div>
+        <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full"><i class="fa-solid fa-shield-halved"></i> Đã kích hoạt</span>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="sundays-accumulation-list">
+        <!-- Render động danh sách tích lũy chủ nhật của 5 nhân viên -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Thẻ thống kê số liệu thực tế -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-amber-400">
+      <p class="text-sm text-slate-500 font-medium">Đơn chờ duyệt</p>
+      <h3 class="text-2xl font-extrabold text-amber-500 mt-1" id="s-pending">0</h3>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+      <p class="text-sm text-slate-500 font-medium">Đã duyệt (tháng)</p>
+      <h3 class="text-2xl font-extrabold text-emerald-600 mt-1" id="s-approved">0</h3>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+      <p class="text-sm text-slate-500 font-medium">Tổng ngày nghỉ thực tế</p>
+      <h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="s-days">0</h3>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-red-400">
+      <p class="text-sm text-slate-500 font-medium">Nghỉ không lương</p>
+      <h3 class="text-2xl font-extrabold text-red-500 mt-1" id="s-unpaid">0</h3>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation & Body -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="flex border-b border-slate-100 bg-slate-50/50">
+      <button data-tab="don" class="tab-btn px-6 py-4 text-sm font-semibold border-b-2 border-brand text-brand flex items-center gap-2">
+        <i class="fa-solid fa-list-check"></i> Đơn nghỉ phép
+      </button>
+      <button data-tab="lich" class="tab-btn px-6 py-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-brand flex items-center gap-2">
+        <i class="fa-solid fa-calendar-days"></i> Lịch nghỉ phòng ban
+      </button>
+      <button data-tab="sodu" class="tab-btn px-6 py-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-brand flex items-center gap-2">
+        <i class="fa-solid fa-chart-pie"></i> Số dư phép năm
+      </button>
+    </div>
+
+    <!-- TAB 1: Danh sách Đơn nghỉ phép & Phê duyệt nhanh -->
+    <div id="pane-don" class="tab-pane active">
+      <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3 bg-white">
+        <div class="relative flex-1 min-w-[200px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input id="f-search" type="text" placeholder="Tìm nhân viên..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand outline-none" />
+        </div>
+        <select id="f-type" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+          <option value="">Tất cả loại nghỉ</option>
+        </select>
+        <select id="f-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand outline-none">
+          <option value="">Tất cả trạng thái</option>
+          <option value="pending">Chờ duyệt</option>
+          <option value="approved">Đã duyệt</option>
+          <option value="rejected">Từ chối</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50/80 text-slate-600 font-medium">
+            <tr>
+              <th class="px-4 py-3">Nhân viên</th>
+              <th class="px-4 py-3">Loại nghỉ</th>
+              <th class="px-4 py-3">Từ ngày</th>
+              <th class="px-4 py-3">Đến ngày</th>
+              <th class="px-4 py-3 text-center">Số ngày nghỉ thực tế</th>
+              <th class="px-4 py-3">Lý do</th>
+              <th class="px-4 py-3 text-center">Trạng thái</th>
+              <th class="px-4 py-3 text-center">Hành động duyệt</th>
+            </tr>
+          </thead>
+          <tbody id="don-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: Lịch nghỉ phòng ban (Team Calendar 31 ngày) -->
+    <div id="pane-lich" class="tab-pane p-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-eye text-brand"></i> Sơ đồ trực quan lịch nghỉ phép phòng ban</h4>
+          <p class="text-xs text-slate-500 mt-0.5">Tháng 01/2026. Rê chuột vào các ô nghỉ để xem thông tin chi tiết.</p>
+        </div>
+        <!-- Chú thích ký hiệu màu sắc -->
+        <div class="flex flex-wrap gap-3 text-xs">
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-emerald-100 border border-emerald-300 rounded-sm"></span><span>Phép năm (PN)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-amber-100 border border-amber-300 rounded-sm"></span><span>Dồn Chủ nhật (DCN)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-blue-100 border border-blue-300 rounded-sm"></span><span>Nghỉ ốm (OM)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-purple-100 border border-purple-300 rounded-sm"></span><span>Việc riêng (VR)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded-sm"></span><span>Không lương (KL)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-white border border-dashed border-slate-400 rounded-sm"></span><span>Chờ duyệt (Viền đứt)</span></div>
+        </div>
+      </div>
+      
+      <!-- Bảng lịch grid cuộn ngang -->
+      <div class="overflow-x-auto border border-slate-100 rounded-xl bg-white">
+        <table class="min-w-[1200px] text-[11px] text-center border-collapse">
+          <thead>
+            <!-- Dòng 1: Số ngày 1 -> 31 -->
+            <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100" id="calendar-header-days">
+              <!-- Render động -->
+            </tr>
+            <!-- Dòng 2: Thứ trong tuần -->
+            <tr class="bg-slate-50/50 text-slate-400 font-medium border-b border-slate-150" id="calendar-header-weekdays">
+              <!-- Render động -->
+            </tr>
+          </thead>
+          <tbody id="calendar-body" class="divide-y divide-slate-100">
+            <!-- Render động hàng của các nhân viên -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: Số dư phép năm -->
+    <div id="pane-sodu" class="tab-pane">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-600 font-medium">
+            <tr>
+              <th class="px-4 py-3">Nhân viên</th>
+              <th class="px-4 py-3">Phòng ban</th>
+              <th class="px-4 py-3 text-center">Phép năm tiêu chuẩn</th>
+              <th class="px-4 py-3 text-center">Đã sử dụng (Lũy kế)</th>
+              <th class="px-4 py-3 text-center">Còn lại khả dụng</th>
+              <th class="px-4 py-3 text-center">Nghỉ ốm (BHXH)</th>
+              <th class="px-4 py-3 text-center">Không lương</th>
+              <th class="px-4 py-3">Tiến độ sử dụng phép năm</th>
+            </tr>
+          </thead>
+          <tbody id="sodu-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL ĐĂNG KÝ NGHỈ PHÉP THÔNG MINH -->
+<div id="modal-register" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+  <div class="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-lg w-full overflow-hidden transform scale-95 transition-all duration-300" id="modal-content">
+    
+    <!-- Header -->
+    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-brand flex items-center justify-center">
+          <i class="fa-solid fa-file-signature text-sm"></i>
+        </div>
+        <h3 class="font-bold text-slate-800">Đăng ký nghỉ phép mới</h3>
+      </div>
+      <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Body Form -->
+    <form id="form-register-leave" class="p-6 space-y-4">
+      
+      <!-- Nhân viên đăng ký -->
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Nhân viên xin nghỉ</label>
+        <select id="reg-employee" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm bg-white" required>
+          <!-- Load động từ payrollRows -->
+        </select>
+      </div>
+
+      <!-- Loại nghỉ phép & Số dư tương ứng -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Loại nghỉ phép</label>
+          <select id="reg-type" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm bg-white" required>
+            <!-- Load động từ TYPES -->
+          </select>
+        </div>
+        <!-- Vùng hiển thị số dư phép/ngày dồn động -->
+        <div class="flex items-end pb-0.5">
+          <div class="p-3 bg-slate-50 border border-slate-150 rounded-xl w-full flex items-center justify-between text-xs" id="reg-balance-box">
+            <span class="text-slate-500" id="balance-label">Chọn loại nghỉ:</span>
+            <span class="font-bold text-slate-700" id="balance-value">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Từ ngày & Đến ngày -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Từ ngày</label>
+          <input type="date" id="reg-start-date" min="2026-01-01" max="2026-01-31" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm" required />
+        </div>
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Đến ngày</label>
+          <input type="date" id="reg-end-date" min="2026-01-01" max="2026-01-31" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm" required />
+        </div>
+      </div>
+
+      <!-- Hiển thị tính toán số ngày nghỉ thực tế & Cảnh báo nếu có lỗi dồn nghỉ -->
+      <div class="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-center justify-between text-xs">
+        <div class="flex items-center gap-1.5 text-emerald-800">
+          <i class="fa-solid fa-calculator"></i>
+          <span>Số ngày nghỉ thực tế tính lương:</span>
+        </div>
+        <span class="font-extrabold text-sm text-emerald-700" id="reg-actual-days">0 ngày</span>
+      </div>
+
+      <!-- Lý do nghỉ -->
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Lý do xin nghỉ</label>
+        <textarea id="reg-reason" placeholder="Nhập lý do cụ thể..." rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm" required></textarea>
+      </div>
+
+      <!-- VÙNG CẢNH BÁO TRÙNG LỊCH (Render động dạng Alert màu vàng hổ phách) -->
+      <div id="conflict-alert-box" class="hidden">
+        <!-- Nội dung warning trùng lịch -->
+      </div>
+
+      <!-- VÙNG CẢNH BÁO LỖI VƯỢT HẠN MỨC (Render động dạng Alert màu đỏ) -->
+      <div id="error-alert-box" class="hidden">
+        <!-- Nội dung báo lỗi -->
+      </div>
+
+      <!-- Footer Action -->
+      <div class="pt-2 flex justify-end gap-3 border-t border-slate-100">
+        <button type="button" id="btn-cancel-modal" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm rounded-xl transition-all">Huỷ</button>
+        <button type="submit" id="btn-submit-leave" class="px-5 py-2 bg-brand hover:bg-brand-dark text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i> Gửi đơn đăng ký
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Lớp overlay làm mờ khi load trang -->
+<div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+<script>
+(function(){
+  const CFG = window.MKC_PAYROLL_VP_CONFIG;
+  if (!CFG) return;
+
+  const root = document.getElementById('payroll-leave'); if(!root) return;
+  const $ = (s) => root.querySelector(s);
+
+  // Định nghĩa loại nghỉ và style
+  const TYPES = {
+    phep:       ["Phép năm", "bg-emerald-100 text-emerald-800 border-emerald-300", "PN"],
+    dcn:        ["Nghỉ dồn Chủ nhật", "bg-amber-100 text-amber-800 border-amber-300", "DCN"],
+    om:         ["Nghỉ ốm (BHXH)", "bg-blue-100 text-blue-800 border-blue-300", "OM"],
+    rieng:      ["Việc riêng", "bg-purple-100 text-purple-800 border-purple-300", "VR"],
+    khongluong: ["Không lương", "bg-red-100 text-red-800 border-red-300", "KL"]
+  };
+  
+  const ST = {
+    pending:  ["Chờ duyệt", "bg-amber-50 text-amber-700 border-amber-200"],
+    approved: ["Đã duyệt", "bg-emerald-50 text-emerald-700 border-emerald-200"],
+    rejected: ["Từ chối", "bg-slate-100 text-slate-500 border-slate-200"]
+  };
+
+  // 1. KHỞI TẠO VÀ ĐỒNG BỘ LOCALSTORAGE
+  let settings = JSON.parse(localStorage.getItem('mkc_leave_settings'));
+  if (!settings) {
+    settings = {
+      workWeekMode: "6", // Mặc định 6 ngày/tuần
+      accumulatedSundays: {
+        "VP001": 3,
+        "VP002": 1,
+        "VP010": 2,
+        "VP021": 4,
+        "VP033": 0
+      }
+    };
+    localStorage.setItem('mkc_leave_settings', JSON.stringify(settings));
+  }
+
+  let requests = JSON.parse(localStorage.getItem('mkc_leave_requests'));
+  if (!requests) {
+    // Tạo danh sách đơn nghỉ phép ban đầu
+    requests = [
+      { id: 1, name: "Trần Thị Mỹ Hạnh", code: "VP010", type: "phep", startDate: "2026-01-16", endDate: "2026-01-16", days: 1, reason: "Giải quyết việc cá nhân", status: "pending" },
+      { id: 2, name: "Nguyễn Văn Toàn", code: "VP002", type: "rieng", startDate: "2026-01-05", endDate: "2026-01-05", days: 1, reason: "Đám cưới người thân", status: "approved" },
+      { id: 3, name: "Sok Dara", code: "VP021", type: "khongluong", startDate: "2026-01-20", endDate: "2026-01-24", days: 5, reason: "Về quê dài ngày", status: "pending" },
+      { id: 4, name: "Lê Minh Kha", code: "VP033", type: "phep", startDate: "2026-01-02", endDate: "2026-01-03", days: 2, reason: "Nghỉ dưỡng", status: "approved" }
+    ];
+    localStorage.setItem('mkc_leave_requests', JSON.stringify(requests));
+  }
+
+  let balances = JSON.parse(localStorage.getItem('mkc_leave_balances'));
+  if (!balances) {
+    balances = {};
+    CFG.payrollRows.forEach(row => {
+      // Giả định phép năm tiêu chuẩn 12 ngày. Số phép đã dùng ban đầu
+      const defaultUsed = row.code === 'VP001' ? 4 : (row.code === 'VP002' ? 3 : (row.code === 'VP010' ? 2 : (row.code === 'VP021' ? 1 : 0)));
+      balances[row.code] = {
+        name: row.name,
+        department: row.department,
+        total: 12,
+        used: defaultUsed,
+        sick: row.code === 'VP010' ? 1 : 0,
+        unpaid: row.code === 'VP021' ? 3 : 0
+      };
+    });
+    localStorage.setItem('mkc_leave_balances', JSON.stringify(balances));
+  }
+
+  // 2. CÁC HÀM HELPER VÀ LÝ THUYẾT ĐỘNG
+  
+  // Kiểm tra thứ của ngày trong tháng 01/2026 (0: Chủ Nhật, 6: Thứ Bảy)
+  const getDayOfWeek = (day) => {
+    return new Date(2026, 0, day).getDay();
+  };
+
+  // Tính số ngày nghỉ phép thực tế (trừ ngày nghỉ tuần)
+  function calculateLeaveDays(startStr, endStr, weekMode) {
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    if (isNaN(start) || isNaN(end) || start > end) return 0;
+    
+    let count = 0;
+    let curr = new Date(start);
+    while (curr <= end) {
+      const dow = curr.getDay(); // 0: CN, 6: T7
+      if (weekMode === "6") {
+        if (dow !== 0) count += 1; // Chỉ loại trừ Chủ Nhật
+      } else if (weekMode === "5.5") {
+        if (dow === 0) count += 0; // Chủ Nhật không tính
+        else if (dow === 6) count += 0.5; // Thứ Bảy tính 0.5 ngày phép
+        else count += 1;
+      } else { // 5 ngày
+        if (dow !== 0 && dow !== 6) count += 1; // Loại trừ Thứ Bảy và Chủ Nhật
+      }
+      curr.setDate(curr.getDate() + 1);
+    }
+    return count;
+  }
+
+  // Đếm số ngày nghỉ tiêu chuẩn trong tháng 01/2026 (31 ngày)
+  function calculateStandardOffDays(weekMode) {
+    let offDays = 0;
+    for (let d = 1; d <= 31; d++) {
+      const dow = getDayOfWeek(d);
+      if (weekMode === "6") {
+        if (dow === 0) offDays += 1; // 4 ngày Chủ Nhật
+      } else if (weekMode === "5.5") {
+        if (dow === 0) offDays += 1;
+        else if (dow === 6) offDays += 0.5; // 5 ngày thứ bảy x 0.5 = 2.5. Tổng = 6.5
+      } else {
+        if (dow === 0 || dow === 6) offDays += 1; // 4 CN + 5 T7 = 9 ngày
+      }
+    }
+    return offDays;
+  }
+
+  // Hiển thị toast thông báo nhanh
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `p-4 rounded-xl text-white text-sm font-semibold shadow-lg flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto ${
+      type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-amber-500'
+    }`;
+    toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+      toast.classList.remove('translate-y-2', 'opacity-0');
+    }, 10);
+    
+    // Remove after 3s
+    setTimeout(() => {
+      toast.classList.add('translate-y-2', 'opacity-0');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  // 3. RENDER CÁC COMPONENT GIAO DIỆN
+
+  // Render Danh sách Tích lũy dồn nghỉ Chủ nhật
+  function renderSundaysAccumulation() {
+    const container = document.getElementById('sundays-accumulation-list');
+    if (!container) return;
+    
+    container.innerHTML = CFG.payrollRows.map(emp => {
+      const count = settings.accumulatedSundays[emp.code] || 0;
+      return `
+        <div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition-all select-none">
+          <div class="min-w-0">
+            <h5 class="text-xs font-bold text-slate-800 truncate">${emp.name}</h5>
+            <p class="text-[10px] text-slate-400 font-mono">${emp.code} · ${emp.department}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="w-6 h-6 rounded-md bg-white border border-slate-200 hover:border-brand-light hover:text-brand flex items-center justify-center font-bold text-xs shadow-sm transition-all animate-none" onclick="adjustSundayAccumulation('${emp.code}', -1)">-</button>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${count === 4 ? 'bg-amber-100 text-amber-800' : count > 0 ? 'bg-emerald-50 text-brand' : 'bg-slate-200/60 text-slate-400'}" id="sunday-count-${emp.code}">
+              ${count} ngày
+            </span>
+            <button class="w-6 h-6 rounded-md bg-white border border-slate-200 hover:border-brand-light hover:text-brand flex items-center justify-center font-bold text-xs shadow-sm transition-all animate-none" onclick="adjustSundayAccumulation('${emp.code}', 1)">+</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Điều chỉnh số ngày dồn Chủ nhật của nhân viên
+  window.adjustSundayAccumulation = (code, delta) => {
+    let current = settings.accumulatedSundays[code] || 0;
+    let next = current + delta;
+    if (next < 0) next = 0;
+    if (next > 4) {
+      showToast("Tối đa tích lũy dồn nghỉ là 4 ngày chủ nhật", "error");
+      return;
+    }
+    settings.accumulatedSundays[code] = next;
+    localStorage.setItem('mkc_leave_settings', JSON.stringify(settings));
+    renderSundaysAccumulation();
+    // Cập nhật lại form nếu đang mở
+    updateFormValidation();
+  };
+
+  // Render Thống kê thẻ số liệu
+  function renderStats() {
+    $('#s-pending').textContent = requests.filter(r => r.status === 'pending').length;
+    $('#s-approved').textContent = requests.filter(r => r.status === 'approved').length;
+    
+    // Tính tổng số ngày nghỉ thực tế của tất cả các đơn đã duyệt trong tháng
+    const totalDays = requests.filter(r => r.status === 'approved').reduce((sum, r) => sum + r.days, 0);
+    $('#s-days').textContent = totalDays.toString().replace('.5', ',5') + ' ngày';
+    
+    // Nghỉ không lương đã duyệt
+    const totalUnpaid = requests.filter(r => r.type === 'khongluong' && r.status === 'approved').reduce((sum, r) => sum + r.days, 0);
+    $('#s-unpaid').textContent = totalUnpaid.toString().replace('.5', ',5') + ' ngày';
+  }
+
+  // Render danh sách Đơn nghỉ phép (Tab 1)
+  const fType = $('#f-type'), fStatus = $('#f-status'), fSearch = $('#f-search'), body = $('#don-body');
+  
+  // Render options cho dropdown loại nghỉ
+  fType.innerHTML = '<option value="">Tất cả loại nghỉ</option>';
+  Object.entries(TYPES).forEach(([k, v]) => {
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = v[0];
+    fType.appendChild(o);
+  });
+
+  function renderRequestsTable() {
+    const q = fSearch.value.trim().toLowerCase();
+    const t = fType.value;
+    const s = fStatus.value;
+    
+    const filtered = requests.filter(r => {
+      const matchSearch = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q);
+      const matchType = !t || r.type === t;
+      const matchStatus = !s || r.status === s;
+      return matchSearch && matchType && matchStatus;
+    });
+
+    body.innerHTML = filtered.length ? filtered.map(r => {
+      const [tl, tc] = TYPES[r.type];
+      const [sl, sc] = ST[r.status];
+      
+      let actionButtons = '';
+      if (r.status === 'pending') {
+        actionButtons = `
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="approveRequest(${r.id}, true)" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 text-emerald-700 flex items-center justify-center transition-all" title="Duyệt đơn"><i class="fa-solid fa-check text-xs"></i></button>
+            <button onclick="approveRequest(${r.id}, false)" class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 text-red-700 flex items-center justify-center transition-all" title="Từ chối"><i class="fa-solid fa-xmark text-xs"></i></button>
+          </div>
+        `;
+      } else {
+        actionButtons = `<button class="text-slate-400 hover:text-brand px-2 py-1 transition-all" title="Xem chi tiết" onclick="viewProfile('${r.code}')"><i class="fa-solid fa-eye text-sm"></i></button>`;
+      }
+
+      // Format ngày dd/mm/yyyy
+      const fmtDate = (dStr) => dStr.split('-').reverse().join('/');
+
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-4 py-3 hover:bg-slate-100/80 cursor-pointer transition-all" onclick="viewProfile('${r.code}')">
+            <p class="font-semibold text-slate-800 hover:text-brand transition-colors flex items-center gap-1">${r.name} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i></p>
+            <p class="text-xs text-slate-400 font-mono">${r.code}</p>
+          </td>
+          <td class="px-4 py-3"><span class="${tc} text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border">${tl}</span></td>
+          <td class="px-4 py-3 text-slate-600">${fmtDate(r.startDate)}</td>
+          <td class="px-4 py-3 text-slate-600">${fmtDate(r.endDate)}</td>
+          <td class="px-4 py-3 text-center font-bold text-slate-800">${r.days.toString().replace('.5', ',5')}</td>
+          <td class="px-4 py-3 text-slate-500 max-w-[200px] truncate" title="${r.reason}">${r.reason}</td>
+          <td class="px-4 py-3 text-center"><span class="${sc} text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap border">${sl}</span></td>
+          <td class="px-4 py-3 text-center">${actionButtons}</td>
+        </tr>
+      `;
+    }).join('') : `<tr><td colspan="8" class="px-4 py-10 text-center text-slate-400">Không có đơn phù hợp.</td></tr>`;
+  }
+
+  // Xử lý duyệt hoặc từ chối đơn nhanh
+  window.approveRequest = (id, isApproved) => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    
+    const oldStatus = req.status;
+    req.status = isApproved ? 'approved' : 'rejected';
+    
+    // Nếu được duyệt: Cập nhật Số dư phép năm hoặc Ngày chủ nhật tích lũy của nhân viên
+    if (isApproved && oldStatus === 'pending') {
+      if (req.type === 'phep') {
+        // Cộng vào số phép đã dùng của nhân viên
+        if (balances[req.code]) {
+          balances[req.code].used = Math.min(balances[req.code].total, balances[req.code].used + req.days);
+        }
+      } else if (req.type === 'dcn') {
+        // Trừ bớt số ngày nghỉ dồn chủ nhật tích lũy của nhân viên
+        const currentSundays = settings.accumulatedSundays[req.code] || 0;
+        settings.accumulatedSundays[req.code] = Math.max(0, currentSundays - req.days);
+        localStorage.setItem('mkc_leave_settings', JSON.stringify(settings));
+        renderSundaysAccumulation();
+      } else if (req.type === 'om') {
+        if (balances[req.code]) {
+          balances[req.code].sick += req.days;
+        }
+      } else if (req.type === 'khongluong') {
+        if (balances[req.code]) {
+          balances[req.code].unpaid += req.days;
+        }
+      }
+      
+      localStorage.setItem('mkc_leave_balances', JSON.stringify(balances));
+      showToast(`Đã duyệt đơn nghỉ của nhân viên ${req.name}`, "success");
+    } else if (!isApproved) {
+      showToast(`Đã từ chối đơn nghỉ của nhân viên ${req.name}`, "error");
+    }
+
+    localStorage.setItem('mkc_leave_requests', JSON.stringify(requests));
+    
+    // Cập nhật lại UI
+    renderRequestsTable();
+    renderStats();
+    renderBalancesTable();
+    renderTeamCalendar();
+  };
+
+  // Render Số dư phép năm (Tab 3)
+  function renderBalancesTable() {
+    const list = Object.entries(balances);
+    $('#sodu-body').innerHTML = list.map(([code, b]) => {
+      const used = b.used;
+      const total = b.total;
+      const left = total - used;
+      const pct = Math.round((used / total) * 100);
+      const barColor = pct >= 80 ? 'bg-red-500' : pct >= 50 ? 'bg-amber-400' : 'bg-emerald-500';
+      
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-4 py-3 hover:bg-slate-100/80 cursor-pointer transition-all" onclick="viewProfile('${code}')">
+            <p class="font-semibold text-slate-800 hover:text-brand transition-colors flex items-center gap-1">${b.name} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i></p>
+            <p class="text-xs text-slate-400 font-mono">${code}</p>
+          </td>
+          <td class="px-4 py-3 text-slate-600">${b.department}</td>
+          <td class="px-4 py-3 text-center">${total}</td>
+          <td class="px-4 py-3 text-center font-semibold text-slate-700">${used.toString().replace('.5', ',5')}</td>
+          <td class="px-4 py-3 text-center font-bold ${left <= 2 ? 'text-red-500' : 'text-emerald-600'}">${left.toString().replace('.5', ',5')}</td>
+          <td class="px-4 py-3 text-center text-slate-500">${b.sick.toString().replace('.5', ',5')}</td>
+          <td class="px-4 py-3 text-center text-slate-500">${b.unpaid.toString().replace('.5', ',5')}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <div class="flex-1 bg-slate-200 rounded-full h-2.5 min-w-[80px]">
+                <div class="${barColor} h-2.5 rounded-full" style="width: ${pct}%"></div>
+              </div>
+              <span class="text-xs text-slate-500">${pct}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Render Lịch nghỉ phòng ban (Tab 2)
+  function renderTeamCalendar() {
+    const daysHeader = document.getElementById('calendar-header-days');
+    const weekdaysHeader = document.getElementById('calendar-header-weekdays');
+    const calendarBody = document.getElementById('calendar-body');
+    if (!daysHeader || !weekdaysHeader || !calendarBody) return;
+
+    // 1. Tạo tiêu đề cột 1->31
+    let daysHtml = `<th class="px-4 py-3 border-r border-slate-100 text-left sticky left-0 bg-slate-50 z-10 w-[200px]" rowspan="2">Nhân viên</th>`;
+    let wdaysHtml = '';
+    
+    const weekLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    
+    for (let d = 1; d <= 31; d++) {
+      const dow = getDayOfWeek(d);
+      const isWeekend = (dow === 0 || (dow === 6 && settings.workWeekMode === "5"));
+      const isHalfWeekend = (dow === 6 && settings.workWeekMode === "5.5");
+      
+      let headerBg = '';
+      if (isWeekend) headerBg = 'bg-red-50 text-red-500';
+      else if (isHalfWeekend) headerBg = 'bg-amber-50/50 text-amber-600';
+      else headerBg = 'text-slate-600';
+      
+      daysHtml += `<th class="py-2 border-r border-slate-100 ${headerBg} font-bold text-center w-[35px]">${d < 10 ? '0' + d : d}</th>`;
+      wdaysHtml += `<th class="py-1 border-r border-slate-100 text-[10px] ${headerBg} font-medium text-center">${weekLabels[dow]}</th>`;
+    }
+    daysHeader.innerHTML = daysHtml;
+    weekdaysHeader.innerHTML = wdaysHtml;
+
+    // 2. Tạo hàng cho mỗi nhân viên
+    calendarBody.innerHTML = CFG.payrollRows.map(emp => {
+      let cells = `<td class="px-3 py-3 font-semibold text-slate-700 text-left border-r border-slate-100 sticky left-0 bg-white shadow-[2px_0_5px_rgba(0,0,0,0.03)] z-10">
+        <p class="hover:text-brand cursor-pointer truncate" onclick="viewProfile('${emp.code}')">${emp.name}</p>
+        <p class="text-[10px] text-slate-400 font-mono">${emp.code} · ${emp.department}</p>
+      </td>`;
+
+      for (let d = 1; d <= 31; d++) {
+        const dow = getDayOfWeek(d);
+        const isWeekend = (dow === 0 || (dow === 6 && settings.workWeekMode === "5"));
+        const isHalfWeekend = (dow === 6 && settings.workWeekMode === "5.5");
+        
+        let cellBg = 'bg-white';
+        if (isWeekend) cellBg = 'bg-slate-50/80';
+        else if (isHalfWeekend) cellBg = 'bg-slate-50/30';
+        
+        const dateStr = `2026-01-${d < 10 ? '0' + d : d}`;
+        
+        // Tìm xem ngày này nhân viên này có đơn nghỉ nào không
+        const dayRequests = requests.filter(r => 
+          r.code === emp.code && 
+          r.startDate <= dateStr && 
+          r.endDate >= dateStr &&
+          r.status !== 'rejected' // Bỏ qua đơn bị từ chối
+        );
+        
+        let cellContent = '';
+        if (dayRequests.length > 0) {
+          const req = dayRequests[0];
+          const [tl, tc, alias] = TYPES[req.type];
+          const isPending = req.status === 'pending';
+          
+          let borderStyle = isPending ? 'border-dashed border border-slate-400' : 'border border-transparent';
+          let shadowStyle = isPending ? 'opacity-75' : '';
+          
+          // Tooltip chi tiết
+          cellContent = `
+            <div class="tooltip-trigger relative flex items-center justify-center w-full h-full min-h-[28px] cursor-pointer">
+              <span class="${tc} text-[10px] font-bold px-1 py-0.5 rounded-md ${borderStyle} ${shadowStyle} scale-90 md:scale-95 transform block select-none">
+                ${alias}
+              </span>
+              <!-- Tooltip Content -->
+              <div class="tooltip-content hidden absolute bottom-full mb-2 bg-slate-900 text-white text-[11px] p-2.5 rounded-lg shadow-xl z-20 w-[180px] text-left">
+                <p class="font-bold border-b border-slate-800 pb-1 flex justify-between items-center">
+                  <span>${tl}</span>
+                  <span class="text-[9px] font-medium px-1.5 py-0.2 rounded-full ${
+                    req.status === 'approved' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                  }">${req.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}</span>
+                </p>
+                <p class="mt-1 text-slate-300">Từ: ${req.startDate.split('-').reverse().join('/')}</p>
+                <p class="text-slate-300">Đến: ${req.endDate.split('-').reverse().join('/')}</p>
+                <p class="text-slate-300 font-medium truncate mt-0.5">Lý do: ${req.reason}</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        cells += `<td class="p-1 border-r border-slate-100 ${cellBg} relative align-middle">${cellContent}</td>`;
+      }
+
+      return `<tr class="hover:bg-slate-50/50 transition-all">${cells}</tr>`;
+    }).join('');
+  }
+
+  // 4. BỘ ĐIỀU KHIỂN CẤU HÌNH TUẦN LÀM VIỆC ĐỘNG
+
+  function initWeekModeConfig() {
+    const radioButtons = root.querySelectorAll('input[name="workWeekMode"]');
+    
+    // Set checked ban đầu
+    radioButtons.forEach(radio => {
+      if (radio.value === settings.workWeekMode) {
+        radio.checked = true;
+        $(`#label-week-${radio.value.replace('.', '')}`).classList.add('border-brand', 'bg-emerald-50/40', 'ring-2', 'ring-brand-light');
+      }
+      
+      radio.addEventListener('change', (e) => {
+        // Xóa class active cũ
+        root.querySelectorAll('.border-brand').forEach(el => {
+          el.classList.remove('border-brand', 'bg-emerald-50/40', 'ring-2', 'ring-brand-light');
+        });
+        
+        // Thêm active mới
+        const mode = e.target.value;
+        $(`#label-week-${mode.replace('.', '')}`).classList.add('border-brand', 'bg-emerald-50/40', 'ring-2', 'ring-brand-light');
+        
+        // Lưu cấu hình
+        settings.workWeekMode = mode;
+        localStorage.setItem('mkc_leave_settings', JSON.stringify(settings));
+        
+        // Cập nhật UI
+        updateWeekModeDisplay();
+        renderTeamCalendar();
+        
+        // Cập nhật lại số ngày nghỉ trên form modal nếu đang mở
+        updateFormValidation();
+        
+        showToast("Đã cập nhật lịch làm việc tiêu chuẩn trong tháng", "success");
+      });
+    });
+    
+    updateWeekModeDisplay();
+  }
+
+  function updateWeekModeDisplay() {
+    const mode = settings.workWeekMode;
+    let desc = "6 ngày/tuần";
+    if (mode === "5.5") desc = "5.5 ngày/tuần (Nghỉ chiều T7 + CN)";
+    else if (mode === "5") desc = "5 ngày/tuần (Nghỉ T7 + CN)";
+    
+    $('#cfg-week-desc').textContent = desc;
+    
+    const standardOff = calculateStandardOffDays(mode);
+    $('#cfg-standard-off').textContent = standardOff + ' ngày';
+  }
+
+  // 5. SỰ KIỆN TABS
+  root.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      root.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-brand', 'text-brand');
+        b.classList.add('border-transparent', 'text-slate-500');
+      });
+      btn.classList.add('border-brand', 'text-brand');
+      btn.classList.remove('border-transparent', 'text-slate-500');
+      root.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      $('#pane-' + btn.dataset.tab).classList.add('active');
+    };
+  });
+
+  // 6. LOGIC MODAL ĐĂNG KÝ NGHỈ PHÉP
+
+  const modal = document.getElementById('modal-register');
+  const modalContent = document.getElementById('modal-content');
+  const btnOpenRegister = document.getElementById('btn-open-register');
+  const btnCloseModal = document.getElementById('btn-close-modal');
+  const btnCancelModal = document.getElementById('btn-cancel-modal');
+  const formRegister = document.getElementById('form-register-leave');
+
+  const regEmployee = document.getElementById('reg-employee');
+  const regType = document.getElementById('reg-type');
+  const balanceLabel = document.getElementById('balance-label');
+  const balanceValue = document.getElementById('balance-value');
+  const regStartDate = document.getElementById('reg-start-date');
+  const regEndDate = document.getElementById('reg-end-date');
+  const regActualDays = document.getElementById('reg-actual-days');
+  const regReason = document.getElementById('reg-reason');
+  const conflictAlert = document.getElementById('conflict-alert-box');
+  const errorAlert = document.getElementById('error-alert-box');
+  const btnSubmitLeave = document.getElementById('btn-submit-leave');
+
+  // Nạp danh sách nhân viên vào form đăng ký
+  function initRegisterFormFields() {
+    // Dropdown nhân viên
+    regEmployee.innerHTML = CFG.payrollRows.map(emp => 
+      `<option value="${emp.code}">${emp.name} (${emp.code} - ${emp.department})</option>`
+    ).join('');
+
+    // Thiết lập nhân viên mặc định đang chọn từ hồ sơ
+    const activeEmp = localStorage.getItem('selected_emp_code') || 'VP001';
+    if (CFG.payrollRows.find(e => e.code === activeEmp)) {
+      regEmployee.value = activeEmp;
+    }
+
+    // Dropdown loại nghỉ
+    regType.innerHTML = Object.entries(TYPES).map(([k, v]) => 
+      `<option value="${k}">${v[0]}</option>`
+    ).join('');
+
+    // Đặt mặc định Từ ngày & Đến ngày là 01/01/2026
+    regStartDate.value = "2026-01-01";
+    regEndDate.value = "2026-01-01";
+  }
+
+  // Cập nhật số dư hiển thị, tính toán ngày nghỉ thực tế và kiểm tra trùng lịch
+  function updateFormValidation() {
+    const code = regEmployee.value;
+    const type = regType.value;
+    const startVal = regStartDate.value;
+    const endVal = regEndDate.value;
+    
+    // 1. Hiển thị số dư phép/ngày chủ nhật tích lũy tương ứng
+    if (type === 'phep') {
+      const bal = balances[code];
+      const left = bal ? (bal.total - bal.used) : 0;
+      balanceLabel.textContent = "Phép năm còn lại:";
+      balanceValue.textContent = `${left} ngày`;
+      balanceValue.className = `font-bold ${left <= 2 ? 'text-red-500' : 'text-emerald-600'}`;
+    } else if (type === 'dcn') {
+      const sundays = settings.accumulatedSundays[code] || 0;
+      balanceLabel.textContent = "Chủ nhật dồn tích lũy:";
+      balanceValue.textContent = `${sundays}/4 ngày`;
+      balanceValue.className = `font-bold ${sundays === 0 ? 'text-slate-400' : 'text-amber-500'}`;
+    } else {
+      balanceLabel.textContent = "Hạn mức loại nghỉ:";
+      balanceValue.textContent = "Không giới hạn";
+      balanceValue.className = "font-bold text-slate-500";
+    }
+
+    // 2. Tính số ngày nghỉ thực tế
+    const actualDays = calculateLeaveDays(startVal, endVal, settings.workWeekMode);
+    regActualDays.textContent = `${actualDays.toString().replace('.5', ',5')} ngày`;
+
+    // 3. Reset các cảnh báo
+    conflictAlert.className = 'hidden';
+    errorAlert.className = 'hidden';
+    btnSubmitLeave.disabled = false;
+    btnSubmitLeave.classList.remove('opacity-50', 'cursor-not-allowed');
+
+    // 4. Kiểm tra quy tắc dồn nghỉ chủ nhật
+    if (type === 'dcn') {
+      const sundays = settings.accumulatedSundays[code] || 0;
+      if (actualDays > sundays) {
+        errorAlert.className = 'p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2 mt-3';
+        errorAlert.innerHTML = `
+          <i class="fa-solid fa-circle-xmark mt-0.5 text-red-600"></i>
+          <div>
+            <strong>Lỗi hạn mức dồn nghỉ:</strong> Số ngày nghỉ đăng ký (${actualDays} ngày) vượt quá số ngày chủ nhật tích lũy hiện có của nhân sự (${sundays} ngày).
+          </div>
+        `;
+        btnSubmitLeave.disabled = true;
+        btnSubmitLeave.classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+      
+      if (actualDays > 4) {
+        errorAlert.className = 'p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2 mt-3';
+        errorAlert.innerHTML = `
+          <i class="fa-solid fa-circle-xmark mt-0.5 text-red-600"></i>
+          <div>
+            <strong>Vi phạm quy tắc dồn nghỉ:</strong> Bạn chỉ được dồn tối đa <b>4 ngày nghỉ Chủ nhật</b> cho một đợt xin nghỉ phép.
+          </div>
+        `;
+        btnSubmitLeave.disabled = true;
+        btnSubmitLeave.classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+    } else if (type === 'phep') {
+      const bal = balances[code];
+      const left = bal ? (bal.total - bal.used) : 0;
+      if (actualDays > left) {
+        errorAlert.className = 'p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2 mt-3';
+        errorAlert.innerHTML = `
+          <i class="fa-solid fa-circle-xmark mt-0.5 text-red-600"></i>
+          <div>
+            <strong>Lỗi số dư phép năm:</strong> Số ngày nghỉ đăng ký (${actualDays} ngày) vượt quá số phép năm còn lại khả dụng của bạn (${left} ngày).
+          </div>
+        `;
+        btnSubmitLeave.disabled = true;
+        btnSubmitLeave.classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+    }
+
+    // 5. Kiểm tra Cảnh báo trùng lịch phòng ban (Amber Alert)
+    if (startVal && endVal && startVal <= endVal) {
+      const selectedEmp = CFG.payrollRows.find(e => e.code === code);
+      if (!selectedEmp) return;
+      
+      const deptName = selectedEmp.department;
+      
+      // Tìm các đơn nghỉ của các đồng nghiệp cùng phòng ban (không bao gồm chính mình)
+      const conflicts = requests.filter(r => 
+        r.code !== code && 
+        (r.status === 'approved' || r.status === 'pending') &&
+        (CFG.payrollRows.find(e => e.code === r.code)?.department === deptName) &&
+        (r.startDate <= endVal && r.endDate >= startVal) // Khoảng thời gian giao nhau
+      );
+      
+      if (conflicts.length > 0) {
+        const c = conflicts[0];
+        const [tl] = TYPES[c.type];
+        
+        conflictAlert.className = 'p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2 mt-3';
+        conflictAlert.innerHTML = `
+          <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-600"></i>
+          <div>
+            <strong>⚠️ Cảnh báo trùng lịch phòng ban:</strong> Đồng nghiệp <b>${c.name}</b> cùng phòng ban đã đăng ký nghỉ <b>${tl}</b> trong khoảng thời gian này (từ ${c.startDate.split('-').reverse().join('/')} đến ${c.endDate.split('-').reverse().join('/')}). Đơn vẫn có thể gửi đi chờ duyệt.
+          </div>
+        `;
+      }
+    }
+  }
+
+  // Mở modal
+  btnOpenRegister.onclick = () => {
+    initRegisterFormFields();
+    updateFormValidation();
+    modal.classList.remove('pointer-events-none', 'opacity-0');
+    modalContent.classList.remove('scale-95');
+    modalContent.classList.add('scale-100');
+  };
+
+  // Đóng modal
+  function closeModal() {
+    modal.classList.add('pointer-events-none', 'opacity-0');
+    modalContent.classList.remove('scale-100');
+    modalContent.classList.add('scale-95');
+    formRegister.reset();
+  }
+
+  btnCloseModal.onclick = closeModal;
+  btnCancelModal.onclick = closeModal;
+
+  // Lắng nghe sự thay đổi trên form
+  [regEmployee, regType, regStartDate, regEndDate].forEach(el => {
+    el.addEventListener('change', updateFormValidation);
+  });
+
+  // Submit đơn nghỉ phép mới
+  formRegister.onsubmit = (e) => {
+    e.preventDefault();
+    
+    const code = regEmployee.value;
+    const type = regType.value;
+    const startVal = regStartDate.value;
+    const endVal = regEndDate.value;
+    const reason = regReason.value.trim();
+    
+    if (startVal > endVal) {
+      showToast("Ngày kết thúc không được nhỏ hơn ngày bắt đầu", "error");
+      return;
+    }
+
+    const actualDays = calculateLeaveDays(startVal, endVal, settings.workWeekMode);
+    if (actualDays === 0) {
+      showToast("Số ngày nghỉ bằng 0 (lịch làm việc là các ngày cuối tuần)", "error");
+      return;
+    }
+
+    const selectedEmp = CFG.payrollRows.find(e => e.code === code);
+    if (!selectedEmp) return;
+
+    // Tạo đơn mới
+    const newId = requests.length ? (Math.max(...requests.map(r => r.id)) + 1) : 1;
+    const newRequest = {
+      id: newId,
+      name: selectedEmp.name,
+      code: code,
+      type: type,
+      startDate: startVal,
+      endDate: endVal,
+      days: actualDays,
+      reason: reason,
+      status: "pending" // Mặc định là Chờ duyệt
+    };
+
+    requests.unshift(newRequest); // Đẩy lên đầu danh sách
+    localStorage.setItem('mkc_leave_requests', JSON.stringify(requests));
+
+    showToast(`Đã gửi đăng ký nghỉ phép của ${selectedEmp.name} thành công. Chờ duyệt!`, "success");
+    closeModal();
+
+    // Cập nhật lại UI
+    renderRequestsTable();
+    renderStats();
+    renderTeamCalendar();
+  };
+
+  // 7. KHỞI CHẠY HỆ THỐNG
+  [fSearch, fType, fStatus].forEach(el => el.addEventListener('input', renderRequestsTable));
+  
+  // Chuyển tiếp sang hồ sơ chi tiết khi click nhân sự
+  window.viewProfile = (code) => {
+    localStorage.setItem('selected_emp_code', code);
+    window.location.href = 'ho-so-chi-tiet-nhan-vien.html';
+  };
+
+  initWeekModeConfig();
+  renderSundaysAccumulation();
+  renderRequestsTable();
+  renderBalancesTable();
+  renderTeamCalendar();
+  renderStats();
+
+})();
+</script>
+</body>
+</html>
