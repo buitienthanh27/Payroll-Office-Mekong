@@ -33,7 +33,7 @@
   <!-- Ghi chú -->
   <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 flex items-center gap-2">
     <i class="fa-solid fa-circle-info"></i>
-    OT phải được <b>đăng ký &amp; duyệt</b> mới được tính lương. Hệ số: Ngày thường <b>150%</b> · Chủ nhật <b>200%</b> · Lễ tết <b>300%</b>.
+    <span id="ot-note">OT phải được <b>đăng ký &amp; duyệt</b> mới được tính lương. Hệ số OT lấy từ Cấu hình hệ thống.</span>
   </div>
 
   <!-- Thẻ thống kê -->
@@ -86,8 +86,7 @@
     <div class="p-5 grid grid-cols-2 gap-4">
       <label class="text-sm col-span-2">Nhân viên<select id="m-emp" class="inp w-full mt-1 bg-white"></select></label>
       <label class="text-sm">Ngày tăng ca<input id="m-date" type="date" value="2026-05-28" class="inp w-full mt-1"></label>
-      <label class="text-sm">Loại OT<select id="m-type" class="inp w-full mt-1 bg-white">
-        <option value="thuong">Ngày thường (150%)</option><option value="cn">Chủ nhật (200%)</option><option value="le">Lễ tết (300%)</option></select></label>
+      <label class="text-sm">Loại OT<select id="m-type" class="inp w-full mt-1 bg-white"></select></label>
       <label class="text-sm">Giờ bắt đầu<input id="m-from" type="time" value="17:30" class="inp w-full mt-1"></label>
       <label class="text-sm">Giờ kết thúc<input id="m-to" type="time" value="20:30" class="inp w-full mt-1"></label>
       <label class="text-sm col-span-2">Nội dung công việc<input id="m-reason" type="text" placeholder="VD: Hoàn thiện báo cáo quyết toán..." class="inp w-full mt-1"></label>
@@ -119,11 +118,33 @@
     return base / (stdDays * 8); 
   };
 
-  const TYPES = { 
-    thuong: ["Ngày thường", "150%", 1.5, "bg-emerald-100 text-emerald-700"], 
-    cn: ["Chủ nhật", "200%", 2.0, "bg-blue-100 text-blue-700"], 
-    le: ["Lễ tết", "300%", 3.0, "bg-red-100 text-red-700"] 
-  };
+  let TYPES = {};
+  try {
+    const stored = localStorage.getItem('mkc_ot_config');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      for (const [k, v] of Object.entries(parsed)) {
+        TYPES[k] = [v.name, v.multiplier + '%', v.multiplier / 100, v.css];
+      }
+    } else {
+      TYPES = { 
+        thuong: ["Ngày thường", "150%", 1.5, "bg-emerald-100 text-emerald-700"], 
+        cn: ["Chủ nhật", "200%", 2.0, "bg-blue-100 text-blue-700"], 
+        le: ["Lễ tết", "300%", 3.0, "bg-red-100 text-red-700"] 
+      };
+    }
+  } catch(e) {
+    TYPES = { 
+      thuong: ["Ngày thường", "150%", 1.5, "bg-emerald-100 text-emerald-700"], 
+      cn: ["Chủ nhật", "200%", 2.0, "bg-blue-100 text-blue-700"], 
+      le: ["Lễ tết", "300%", 3.0, "bg-red-100 text-red-700"] 
+    };
+  }
+
+  // Cập nhật câu ghi chú với các hệ số hiện hành
+  const notesStr = Object.values(TYPES).map(t => `${t[0]} <b>${t[1]}</b>`).join(' &middot; ');
+  $('#ot-note').innerHTML = `OT phải được <b>đăng ký &amp; duyệt</b> mới được tính lương. Hệ số: ${notesStr}.`;
+
   const ST = { 
     pending: ["Chờ duyệt", "bg-amber-100 text-amber-700"], 
     approved: ["Đã duyệt", "bg-emerald-100 text-emerald-700"], 
@@ -149,8 +170,8 @@
         return [r[0], "Sok Dara", "VP021", "26/01/2026", "thuong", "17:30", "19:30", 2, "Nhập liệu hồ sơ lưu trữ", "rejected"];
       }
       if (!r || r.length < 10) return null;
-      if (!['thuong', 'cn', 'le'].includes(r[4])) {
-        r[4] = 'thuong';
+      if (!TYPES[r[4]]) {
+        r[4] = Object.keys(TYPES)[0] || 'thuong';
       }
       r[7] = Number(r[7]) || 0;
       return r.slice(0, 10);
@@ -177,6 +198,11 @@
   fType.innerHTML = '<option value="">Tất cả loại OT</option>';
   Object.entries(TYPES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v[0]; fType.appendChild(o); });
   
+  // Đổ danh mục loại OT vào Modal select
+  const selectType = $('#m-type');
+  selectType.innerHTML = '';
+  Object.entries(TYPES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=`${v[0]} (${v[1]})`; selectType.appendChild(o); });
+
   // Đổ danh sách vào Modal select
   const selectEmp = $('#m-emp');
   selectEmp.innerHTML = '';

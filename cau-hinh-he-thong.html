@@ -33,6 +33,7 @@
       <button class="nav-item active w-full text-left px-4 py-3 rounded-lg text-sm font-medium" data-pane="general"><i class="fa-solid fa-gear w-5"></i> Chung</button>
       <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="payroll"><i class="fa-solid fa-calendar w-5"></i> Kỳ lương</button>
       <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="notify"><i class="fa-solid fa-bell w-5"></i> Thông báo</button>
+      <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="ot"><i class="fa-solid fa-clock w-5"></i> Tăng ca (OT)</button>
       <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="email"><i class="fa-solid fa-envelope w-5"></i> Email / SMS</button>
       <button class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm text-slate-600 hover:bg-slate-50" data-pane="integrate"><i class="fa-solid fa-plug w-5"></i> Tích hợp</button>
     </div>
@@ -67,6 +68,28 @@
           <label class="text-sm block">Ngày chi lương<input type="number" class="inp mt-1" value="10" min="1" max="28" /></label>
           <label class="text-sm block">Ngày công chuẩn<input type="number" class="inp mt-1" value="26" min="1" max="31" /></label>
           <label class="text-sm block">Làm tròn lương<select class="inp mt-1 bg-white"><option>USD 2 decimals</option><option>KHR whole number</option></select></label>
+        </div>
+      </div>
+
+      <!-- OT Config -->
+      <div id="pane-ot" class="config-pane hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="font-bold text-slate-800">Cấu hình Danh mục & Hệ số OT</h2>
+          <button id="btn-add-ot-type" class="text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-100"><i class="fa-solid fa-plus"></i> Thêm loại OT</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-600">
+              <tr>
+                <th class="px-3 py-2 w-32">Mã loại</th>
+                <th class="px-3 py-2">Tên loại OT</th>
+                <th class="px-3 py-2 text-right w-32">Hệ số (%)</th>
+                <th class="px-3 py-2 w-48">Màu sắc (Tailwind class)</th>
+                <th class="px-3 py-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody id="ot-config-body" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
       </div>
 
@@ -136,7 +159,61 @@
       document.getElementById('pane-'+n.dataset.pane).classList.remove('hidden');
     };
   });
-  document.getElementById('btn-save').onclick=()=> alert('Đã lưu cấu hình hệ thống.');
+
+  const DEFAULT_OT_CONFIG = {
+    thuong: { name: "Ngày thường", multiplier: 150, css: "bg-emerald-100 text-emerald-700" },
+    cn: { name: "Chủ nhật", multiplier: 200, css: "bg-blue-100 text-blue-700" },
+    le: { name: "Lễ tết", multiplier: 300, css: "bg-red-100 text-red-700" }
+  };
+  
+  let otConfig = {};
+  try {
+    const stored = localStorage.getItem('mkc_ot_config');
+    if (stored) otConfig = JSON.parse(stored);
+    else otConfig = Object.assign({}, DEFAULT_OT_CONFIG);
+  } catch (e) {
+    otConfig = Object.assign({}, DEFAULT_OT_CONFIG);
+  }
+
+  function renderOTConfig() {
+    const body = document.getElementById('ot-config-body');
+    body.innerHTML = Object.entries(otConfig).map(([k, v]) => `
+      <tr class="hover:bg-slate-50">
+        <td class="px-3 py-2"><input type="text" class="inp font-mono text-xs text-slate-500 bg-slate-50" value="${k}" readonly disabled /></td>
+        <td class="px-3 py-2"><input type="text" class="inp ot-name" data-key="${k}" value="${v.name}" /></td>
+        <td class="px-3 py-2"><input type="number" class="inp text-right ot-mul font-bold" data-key="${k}" value="${v.multiplier}" /></td>
+        <td class="px-3 py-2">
+          <input type="text" class="inp ot-css text-xs font-mono mb-1" data-key="${k}" value="${v.css}" />
+          <span class="${v.css} text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">Preview</span>
+        </td>
+        <td class="px-3 py-2 text-center"><button class="text-slate-400 hover:text-red-500" onclick="deleteOT('${k}')"><i class="fa-solid fa-trash-can"></i></button></td>
+      </tr>
+    `).join('');
+    
+    body.querySelectorAll('.ot-name').forEach(el => el.onchange = (e) => otConfig[e.target.dataset.key].name = e.target.value);
+    body.querySelectorAll('.ot-mul').forEach(el => el.onchange = (e) => otConfig[e.target.dataset.key].multiplier = parseFloat(e.target.value)||100);
+    body.querySelectorAll('.ot-css').forEach(el => el.onchange = (e) => { otConfig[e.target.dataset.key].css = e.target.value; renderOTConfig(); });
+  }
+
+  window.deleteOT = (k) => {
+    if(confirm('Bạn có chắc chắn muốn xóa loại OT này?')) {
+      delete otConfig[k];
+      renderOTConfig();
+    }
+  };
+
+  document.getElementById('btn-add-ot-type').onclick = () => {
+    const k = 'ot_' + Math.floor(Math.random() * 10000);
+    otConfig[k] = { name: "Loại OT mới", multiplier: 100, css: "bg-slate-100 text-slate-700" };
+    renderOTConfig();
+  };
+
+  renderOTConfig();
+
+  document.getElementById('btn-save').onclick=()=> {
+    localStorage.setItem('mkc_ot_config', JSON.stringify(otConfig));
+    alert('Đã lưu cấu hình hệ thống.');
+  };
 })();
 </script>
 </body>

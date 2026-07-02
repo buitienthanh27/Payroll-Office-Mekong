@@ -26,6 +26,9 @@
       <p class="text-sm text-slate-500 mt-1">Cập nhật và áp dụng các khoản phụ cấp, thưởng ngoài hợp đồng cho nhân viên văn phòng.</p>
     </div>
     <div class="flex items-center gap-3">
+      <button onclick="openModal()" class="text-sm bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Thêm khoản phụ cấp mới
+      </button>
       <button class="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
         <i class="fa-solid fa-file-import"></i> Import Excel
       </button>
@@ -51,10 +54,7 @@
       <div class="flex items-center gap-2 flex-1">
         <span class="text-sm font-medium text-slate-600">Áp dụng hàng loạt:</span>
         <select id="bulk-type" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-brand focus:ring-1 focus:ring-brand">
-          <option value="meal">Phụ cấp ăn trưa</option>
-          <option value="house">Phụ cấp nhà ở</option>
-          <option value="advance">Tạm ứng</option>
-          <option value="holidayBonus">Thưởng lễ, tết</option>
+          <!-- Populated by JS -->
         </select>
         <input id="bulk-amount" type="number" placeholder="Số tiền ($)" class="text-sm border border-slate-200 rounded-lg px-3 py-2 w-28 bg-white outline-none focus:border-brand focus:ring-1 focus:ring-brand">
         <button id="btn-apply-bulk" class="text-sm bg-slate-800 hover:bg-slate-700 text-white font-medium px-4 py-2 rounded-lg transition-colors">Áp dụng</button>
@@ -65,13 +65,9 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm text-left">
         <thead class="bg-slate-50 text-slate-600 font-medium">
-          <tr>
+          <tr id="matrix-head">
             <th class="px-4 py-3 sticky left-0 bg-slate-50 z-10 min-w-[200px]">Nhân viên</th>
-            <th class="px-3 py-3 text-right">Ăn trưa ($)</th>
-            <th class="px-3 py-3 text-right">Nhà ở ($)</th>
-            <th class="px-3 py-3 text-right">Thưởng Lễ ($)</th>
-            <th class="px-3 py-3 text-right">Tạm ứng ($)</th>
-            <th class="px-3 py-3 text-right">Truy lĩnh ($)</th>
+            <!-- Dynamic columns here -->
             <th class="px-4 py-3 text-right">Tổng (USD)</th>
           </tr>
         </thead>
@@ -82,11 +78,50 @@
 
 </section>
 
+<!-- Modal Thêm Phụ cấp -->
+<div id="col-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up">
+    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h3 class="font-bold text-slate-800">Thêm khoản phụ cấp / thưởng</h3>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Tên khoản phụ cấp/thưởng <span class="text-red-500">*</span></label>
+        <input type="text" id="new-col-name" placeholder="VD: Thưởng dự án" class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-brand">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Loại tính chất</label>
+        <select id="new-col-type" class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-brand">
+          <option value="plus">Cộng (Thu nhập tăng thêm)</option>
+          <option value="minus">Trừ (Khấu trừ / Tạm ứng)</option>
+        </select>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+      <button onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Hủy</button>
+      <button id="btn-add-col" class="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark shadow-sm">Tạo cột mới</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all pointer-events-none z-50">
   <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toast-msg"> Đã lưu thành công.</span>
 </div>
 
 <script>
+let state = [];
+let columns = [
+  { id: 'meal', name: 'Ăn trưa', type: 'plus' },
+  { id: 'house', name: 'Nhà ở', type: 'plus' },
+  { id: 'holidayBonus', name: 'Thưởng Lễ', type: 'plus' },
+  { id: 'advance', name: 'Tạm ứng', type: 'minus' },
+  { id: 'arrears', name: 'Truy lĩnh', type: 'plus' }
+];
+
+function openModal() { document.getElementById('col-modal').classList.remove('hidden'); }
+function closeModal() { document.getElementById('col-modal').classList.add('hidden'); document.getElementById('new-col-name').value = ''; }
+
 (function(){
   const CFG = window.MKC_PAYROLL_VP_CONFIG;
   if (!CFG) return;
@@ -94,54 +129,95 @@
   
   const $ = (s) => document.querySelector(s);
   const body = $('#matrix-body');
+  const head = $('#matrix-head');
+  const fDept = $('#f-dept');
   
   // Trích xuất danh sách phòng ban
   const depts = [...new Set(EMP.map(e => e.department))];
-  const fDept = $('#f-dept');
   depts.forEach(d => {
     const o = document.createElement('option'); o.value = d; o.textContent = d;
     fDept.appendChild(o);
   });
 
-  // Khởi tạo state (copy từ config)
-  let state = EMP.map(e => ({
+  // Khởi tạo state dạng dynamic allowances
+  state = EMP.map(e => ({
     code: e.code,
     name: e.name,
     department: e.department,
-    meal: e.meal || 0,
-    house: e.house || 0,
-    holidayBonus: e.holidayBonus || 0,
-    advance: e.advance || 0,
-    arrears: e.arrears || 0
+    allowances: {
+      meal: e.meal || 0,
+      house: e.house || 0,
+      holidayBonus: e.holidayBonus || 0,
+      advance: e.advance || 0,
+      arrears: e.arrears || 0
+    }
   }));
 
   function calculateTotal(s) {
-    return (s.meal + s.house + s.holidayBonus + s.arrears) - s.advance; // Tạm ứng bị trừ
+    let tot = 0;
+    columns.forEach(col => {
+      const val = parseFloat(s.allowances[col.id]) || 0;
+      if (col.type === 'plus') tot += val;
+      else if (col.type === 'minus') tot -= val;
+    });
+    return tot;
   }
+  
+  // Hàm xóa cột
+  window.deleteColumn = (colId) => {
+    if(!confirm('Bạn có chắc chắn muốn xóa cột phụ cấp này không? Dữ liệu của cột này sẽ bị mất.')) return;
+    columns = columns.filter(c => c.id !== colId);
+    render();
+  };
 
-  function render() {
+  window.render = function() {
     const q = $('#f-search').value.trim().toLowerCase();
     const dep = fDept.value;
     
+    // Render Header
+    let headHtml = `<th class="px-4 py-3 sticky left-0 bg-slate-50 z-10 min-w-[200px]">Nhân viên</th>`;
+    columns.forEach(col => {
+      headHtml += `<th class="px-3 py-3 text-right group">
+        <div class="flex items-center justify-end gap-2">
+          ${col.name} ($)
+          <button onclick="deleteColumn('${col.id}')" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Xóa cột">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </div>
+      </th>`;
+    });
+    headHtml += `<th class="px-4 py-3 text-right text-brand-dark">Tổng (USD)</th>`;
+    head.innerHTML = headHtml;
+    
+    // Render Bulk options
+    const bulkSelect = $('#bulk-type');
+    bulkSelect.innerHTML = columns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+    // Render Body
     const rows = state.filter(e => (!q || e.code.toLowerCase().includes(q) || e.name.toLowerCase().includes(q)) && (!dep || e.department === dep));
     
     body.innerHTML = rows.map(e => {
       const total = calculateTotal(e);
+      let cells = '';
+      columns.forEach(col => {
+        const val = e.allowances[col.id] || 0;
+        const txtColor = col.type === 'minus' ? 'text-red-600 font-medium' : '';
+        cells += `<td class="px-3 py-2 text-right">
+          <input type="number" data-code="${e.code}" data-field="${col.id}" value="${val}" class="inp-cell ${txtColor}" />
+        </td>`;
+      });
+      
       return `<tr class="hover:bg-slate-50/60 transition-colors">
         <td class="px-4 py-2 sticky left-0 bg-white z-10 border-r border-slate-100">
           <p class="font-semibold text-slate-800">${e.name}</p>
           <p class="text-xs text-slate-400">${e.code} · ${e.department}</p>
         </td>
-        <td class="px-3 py-2 text-right"><input type="number" data-code="${e.code}" data-field="meal" value="${e.meal}" class="inp-cell" /></td>
-        <td class="px-3 py-2 text-right"><input type="number" data-code="${e.code}" data-field="house" value="${e.house}" class="inp-cell" /></td>
-        <td class="px-3 py-2 text-right"><input type="number" data-code="${e.code}" data-field="holidayBonus" value="${e.holidayBonus}" class="inp-cell" /></td>
-        <td class="px-3 py-2 text-right"><input type="number" data-code="${e.code}" data-field="advance" value="${e.advance}" class="inp-cell text-red-600 font-medium" /></td>
-        <td class="px-3 py-2 text-right"><input type="number" data-code="${e.code}" data-field="arrears" value="${e.arrears}" class="inp-cell" /></td>
+        ${cells}
         <td class="px-4 py-2 text-right font-bold ${total < 0 ? 'text-red-600' : 'text-emerald-600'}" id="total-${e.code}">${total.toLocaleString('en-US')}</td>
       </tr>`;
-    }).join('') || `<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400">Không tìm thấy dữ liệu.</td></tr>`;
+    }).join('') || `<tr><td colspan="${columns.length+2}" class="px-4 py-10 text-center text-slate-400">Không tìm thấy dữ liệu.</td></tr>`;
 
-    // Gắn sự kiện thay đổi
+    // Gắn sự kiện thay đổi cho các input
     body.querySelectorAll('.inp-cell').forEach(inp => {
       inp.addEventListener('input', (ev) => {
         const val = parseFloat(ev.target.value) || 0;
@@ -150,7 +226,7 @@
         
         const rowData = state.find(s => s.code === code);
         if (rowData) {
-          rowData[field] = val;
+          rowData.allowances[field] = val;
           const newTotal = calculateTotal(rowData);
           const totalEl = $(`#total-${code}`);
           totalEl.textContent = newTotal.toLocaleString('en-US');
@@ -163,19 +239,39 @@
   $('#f-search').addEventListener('input', render);
   fDept.addEventListener('input', render);
   
+  // Tính năng thêm cột
+  $('#btn-add-col').addEventListener('click', () => {
+    const name = $('#new-col-name').value.trim();
+    const type = $('#new-col-type').value;
+    if (!name) return alert('Vui lòng nhập tên khoản phụ cấp/thưởng');
+    
+    // Generate id
+    const id = 'col_' + Date.now();
+    columns.push({ id, name, type });
+    
+    // Initialize value for all employees
+    state.forEach(e => {
+      e.allowances[id] = 0;
+    });
+    
+    closeModal();
+    render();
+    toast(`Đã thêm cột: ${name}`);
+  });
+  
   // Tính năng áp dụng hàng loạt
   $('#btn-apply-bulk').addEventListener('click', () => {
     const field = $('#bulk-type').value;
     const amount = parseFloat($('#bulk-amount').value);
     if (isNaN(amount)) return;
     
-    // Chỉ áp dụng cho các dòng ĐANG HIỂN THỊ trên lưới (phụ thuộc vào filter)
+    // Chỉ áp dụng cho các dòng ĐANG HIỂN THỊ trên lưới
     const q = $('#f-search').value.trim().toLowerCase();
     const dep = fDept.value;
     
     state.forEach(e => {
       if ((!q || e.code.toLowerCase().includes(q) || e.name.toLowerCase().includes(q)) && (!dep || e.department === dep)) {
-        e[field] = amount;
+        e.allowances[field] = amount;
       }
     });
     render();
@@ -189,12 +285,16 @@
   }
   
   $('#btn-save').addEventListener('click', () => {
-    console.log("Saving state: ", state);
+    console.log("Saving dynamic state: ", state, columns);
     toast('Đã lưu dữ liệu Phụ cấp & Thưởng vào hệ thống.');
   });
 
   render();
 })();
 </script>
+<style>
+  @keyframes scale-up { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .animate-scale-up { animation: scale-up 0.2s ease-out; }
+</style>
 </body>
 </html>
