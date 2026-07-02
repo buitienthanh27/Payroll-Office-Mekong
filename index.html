@@ -65,49 +65,27 @@ const menuData = [
     { group: "Dashboard", icon: "fa-chart-pie", color: "icon-green", items: [
         { n: "Dashboard điều hành", i: "fa-chart-column", file: "dashboard.html", v: 1 },
     ]},
-    { group: "Hồ sơ lương nhân viên", icon: "fa-id-card", color: "icon-blue", items: [
-        { n: "Danh sách nhân viên", i: "fa-users", file: "danh-sach-nhan-vien.html", v: 1 },
-        { n: "Hồ sơ chi tiết nhân viên", i: "fa-user-pen", file: "ho-so-chi-tiet-nhan-vien.html", v: 1 },
-        { n: "Lịch sử biến động lương", i: "fa-clock-rotate-left", file: "lich-su-bien-dong-luong.html", v: 2 },
-    ]},
-    { group: "Chấm công VP & nghỉ phép", icon: "fa-fingerprint", color: "icon-teal", items: [
+    { group: "Chấm công & Biến động", icon: "fa-fingerprint", color: "icon-teal", items: [
         { n: "Bảng chấm công tháng", i: "fa-table", file: "bang-cham-cong-thang.html", v: 1 },
-        { n: "Quản lý nghỉ phép (xem HRMS)", i: "fa-calendar-check", file: "quan-ly-nghi-phep.html", v: 1 },
-        { n: "Đơn tăng ca (OT - giai đoạn 2)", i: "fa-business-time", file: "don-tang-ca-ot.html", v: 2 },
-        { n: "Đồng bộ dữ liệu chấm công", i: "fa-rotate", file: "dong-bo-du-lieu-cham-cong.html", v: 2 },
-    ]},
-    { group: "Tính lương", icon: "fa-calculator", color: "icon-purple", items: [
-        { n: "Cấu hình cơ cấu thu nhập", i: "fa-coins", file: "cau-hinh-co-cau-thu-nhap.html", v: 1 },
-        { n: "Cấu hình rule/version lương", i: "fa-square-root-variable", file: "cau-hinh-cong-thuc-luong.html", v: 1 },
-        { n: "Bảng lương tháng", i: "fa-file-invoice-dollar", file: "bang-luong-thang.html", v: 1 },
-        { n: "Bảng lương chi tiết (THANH TOAN)", i: "fa-list-check", file: "bang-luong-chi-tiet.html", v: 1 },
-    ]},
-    { group: "Tạm ứng & Khấu trừ lương", icon: "fa-hand-holding-dollar", color: "icon-orange", items: [
+        { n: "Đơn tăng ca (OT)", i: "fa-business-time", file: "don-tang-ca-ot.html", v: 2 },
+        { n: "Quản lý phụ cấp & thưởng", i: "fa-coins", file: "cau-hinh-co-cau-thu-nhap.html", v: 1 },
         { n: "Đề nghị tạm ứng lương", i: "fa-money-bill-transfer", file: "de-nghi-tam-ung.html", v: 1 },
         { n: "Khấu trừ & tiền điện", i: "fa-minus-circle", file: "quan-ly-khau-tru.html", v: 1 },
     ]},
-    { group: "Đánh giá & KPI", icon: "fa-bullseye", color: "icon-blue", items: [
-        { n: "Cấu hình KPI / tiêu chí", i: "fa-gear", file: "cau-hinh-kpi.html", v: 2 },
-        { n: "Xếp loại A/B/C & chấm điểm", i: "fa-star-half-stroke", file: "cham-diem-kpi.html", v: 2 },
+    { group: "Bảng lương tháng", icon: "fa-calculator", color: "icon-purple", items: [
+        { n: "Bảng lương chi tiết", i: "fa-list-check", file: "bang-luong-chi-tiet.html", v: 1 },
+        { n: "Bảng lương tổng hợp", i: "fa-file-invoice-dollar", file: "bang-luong-thang.html", v: 1 },
     ]},
-    { group: "Bảo hiểm & Thuế TNCN", icon: "fa-shield-heart", color: "icon-red", items: [
-        { n: "NSSF / BH Campuchia", i: "fa-shield", file: "bao-hiem.html", v: 1 },
-        { n: "Thuế TNCN Campuchia", i: "fa-file-invoice", file: "thue-tncn.html", v: 1 },
-        { n: "Báo cáo NSSF", i: "fa-file-export", file: "bao-cao-bao-hiem.html", v: 1 },
-    ]},
-    { group: "Duyệt & Chi trả lương", icon: "fa-circle-check", color: "icon-green", items: [
-        { n: "Duyệt bảng lương", i: "fa-stamp", file: "duyet-bang-luong.html", v: 1 },
-        { n: "Chi trả nhiều đợt (giai đoạn 2)", i: "fa-calendar-days", file: "chi-tra-nhieu-dot.html", v: 2 },
+    { group: "Phê duyệt & Đầu ra", icon: "fa-circle-check", color: "icon-green", items: [
+        { n: "Duyệt & Khóa kỳ lương", i: "fa-stamp", file: "duyet-bang-luong.html", v: 1 },
+        { n: "Chi trả nhiều đợt", i: "fa-calendar-days", file: "chi-tra-nhieu-dot.html", v: 2 },
         { n: "Phiếu lương điện tử", i: "fa-receipt", file: "phieu-luong.html", v: 1 },
-    ]},
-    { group: "Báo cáo quản trị", icon: "fa-chart-line", color: "icon-purple", items: [
-        { n: "PHAN TOAN / TONG HOP", i: "fa-chart-pie", file: "bao-cao-quy-luong.html", v: 1 },
-        { n: "Báo cáo biến động lương", i: "fa-arrows-up-down", file: "bao-cao-bien-dong.html", v: 2 },
+        { n: "Báo cáo quỹ lương", i: "fa-chart-pie", file: "bao-cao-quy-luong.html", v: 1 },
+        { n: "Báo cáo biến động", i: "fa-arrows-up-down", file: "bao-cao-bien-dong.html", v: 2 },
         { n: "Import / Export Excel", i: "fa-file-excel", file: "import-export-excel.html", v: 1 },
     ]},
-    { group: "Hệ thống & Phân quyền", icon: "fa-gear", color: "icon-gray", items: [
+    { group: "Hệ thống", icon: "fa-gear", color: "icon-gray", items: [
         { n: "Người dùng & phân quyền", i: "fa-user-lock", file: "nguoi-dung-phan-quyen.html", v: 1 },
-        { n: "Danh mục nền", i: "fa-database", file: "danh-muc-nen.html", v: 1 },
         { n: "Cấu hình hệ thống", i: "fa-sliders", file: "cau-hinh-he-thong.html", v: 1 },
         { n: "Nhật ký hệ thống", i: "fa-clipboard-list", file: "nhat-ky-he-thong.html", v: 2 },
     ]},

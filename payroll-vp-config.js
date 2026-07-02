@@ -213,33 +213,9 @@ window.MKC_PAYROLL_VP_CONFIG = {
       electricity: 3.25
     }
   ],
-  taxBrackets: [
-    { from: 0, to: 1500000, rate: 0, deduction: 0 },
-    { from: 1500001, to: 2000000, rate: 0.05, deduction: 75000 },
-    { from: 2000001, to: 8500000, rate: 0.10, deduction: 175000 },
-    { from: 8500001, to: 12500000, rate: 0.15, deduction: 600000 },
-    { from: 12500001, to: null, rate: 0.20, deduction: 1225000 }
-  ],
-  // OQ-001: Tách rõ NSSF pension vs healthcare theo BA
-  insuranceRules: {
-    // NSSF Pension (Hưu trí) - OQ-001
-    nssfPensionEmployeeRate: 0.02,  // NLĐ đóng 2%
-    nssfPensionEmployerRate: 0.02,  // DN đóng 2%
-    // NSSF Healthcare (Y tế) - DN chịu toàn bộ từ 2018
-    nssfHealthcareEmployerRate: 0.026, // DN đóng 2.6%
-    // Sàn/trần cho pension - OQ-002
-    nssfFloorKHR: 400000,
-    nssfCapKHR: 1200000,
-    // OQ-003: Tỷ lệ đóng BHXH/BHYT theo Danh mục nền (đã xác nhận)
-    bhxhEmployeeRate: 0.08,    // Cột AH - BHXH NLĐ 8% = (Hệ số + PC) × Lương cơ sở × 8% / Tỷ giá
-    bhytEmployeeRate: 0.015   // Cột AI - BHYT NLĐ 1.5% = (Hệ số + PC) × Lương cơ sở × 1.5% / Tỷ giá
-  },
-  // OQ-006: Giảm trừ gia cảnh Campuchia
-  familyDeductionConfig: {
-    selfDeductionKHR: 0,           // Campuchia không có giảm trừ bản thân như VN
-    dependentDeductionKHR: 150000, // 150,000 KHR/tháng/người phụ thuộc
-    spouseNoIncomeKHR: 150000      // Vợ/chồng không có thu nhập
-  },
+  // Các cấu hình Thuế TNCN, Bảo hiểm (NSSF, BHXH, BHYT) và Giảm trừ gia cảnh
+  // đã được chuyển sang quản lý tập trung tại phân hệ HR.
+  // Payroll VP chỉ nhận kết quả cuối cùng để lên bảng lương.
   // OQ-018: Công đoàn phí - configurable, không hardcode
   unionFeeConfig: {
     formulaType: "coefficient",    // Tính theo hệ số (chờ TCHC xác nhận)

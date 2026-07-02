@@ -561,99 +561,6 @@
   };
 
   // ============================================================
-  // TAX STORE (OQ-006: FamilyRebate, OQ-013: Seniority)
-  // ============================================================
-  const taxStore = {
-    KEY: 'tax_records',
-
-    BRACKETS: CFG.taxBrackets || [
-      { from: 0, to: 1500000, rate: 0, deduction: 0 },
-      { from: 1500001, to: 2000000, rate: 0.05, deduction: 75000 },
-      { from: 2000001, to: 8500000, rate: 0.10, deduction: 175000 },
-      { from: 8500001, to: 12500000, rate: 0.15, deduction: 600000 },
-      { from: 12500001, to: null, rate: 0.20, deduction: 1225000 }
-    ],
-
-    FAMILY_DEDUCTION: CFG.familyDeductionConfig || {
-      dependentDeductionKHR: 150000,
-      spouseNoIncomeKHR: 150000
-    },
-
-    // OQ-006: Tính FamilyRebate
-    calcFamilyRebate(dependents = 0, spouseNoIncome = false) {
-      let total = dependents * this.FAMILY_DEDUCTION.dependentDeductionKHR;
-      if (spouseNoIncome) {
-        total += this.FAMILY_DEDUCTION.spouseNoIncomeKHR;
-      }
-      return total;
-    },
-
-    // OQ-013: Thu nhập chịu thuế = Gross - Thâm niên không chịu thuế (Cột Q) + Thâm niên chịu thuế (Cột R)
-    calcTaxableIncome(gross, seniorityNonTaxable = 0, seniorityTaxable = 0) {
-      return gross - seniorityNonTaxable + seniorityTaxable;
-    },
-
-    // Tính PIT Campuchia
-    calcPIT(taxableIncomeKHR, familyRebateKHR = 0) {
-      const netTaxable = Math.max(0, taxableIncomeKHR - familyRebateKHR);
-
-      let tax = 0;
-      for (const bracket of this.BRACKETS) {
-        if (netTaxable >= bracket.from) {
-          if (bracket.to === null || netTaxable <= bracket.to) {
-            tax = netTaxable * bracket.rate - bracket.deduction;
-            break;
-          }
-        }
-      }
-
-      return {
-        taxableIncomeKHR,
-        familyRebateKHR,
-        netTaxableKHR: netTaxable,
-        taxKHR: Math.max(0, tax),
-        bracket: this.BRACKETS.find(b => netTaxable >= b.from && (b.to === null || netTaxable <= b.to))
-      };
-    }
-  };
-
-  // ============================================================
-  // INSURANCE STORE (OQ-001, OQ-002, OQ-003)
-  // ============================================================
-  const insuranceStore = {
-    RULES: CFG.insuranceRules || {
-      nssfPensionEmployeeRate: 0.02,
-      nssfPensionEmployerRate: 0.02,
-      nssfHealthcareEmployerRate: 0.026,
-      nssfFloorKHR: 400000,
-      nssfCapKHR: 1200000,
-      bhxhEmployeeRate: 0.08,
-      bhytEmployeeRate: 0.015
-    },
-
-    // OQ-001: Tính NSSF Pension (NLĐ 2%)
-    calcNSSFPension(salaryKHR) {
-      const capped = Math.min(
-        Math.max(salaryKHR, this.RULES.nssfFloorKHR),
-        this.RULES.nssfCapKHR
-      );
-      return capped * this.RULES.nssfPensionEmployeeRate;
-    },
-
-    // OQ-003: Tính BHXH NLĐ 8%
-    calcBHXH(coefficient, positionAllowance, baseSalaryVND, exchangeRate) {
-      const base = (coefficient + positionAllowance) * baseSalaryVND;
-      return (base * this.RULES.bhxhEmployeeRate) / exchangeRate;
-    },
-
-    // OQ-003: Tính BHYT NLĐ 1.5%
-    calcBHYT(coefficient, positionAllowance, baseSalaryVND, exchangeRate) {
-      const base = (coefficient + positionAllowance) * baseSalaryVND;
-      return (base * this.RULES.bhytEmployeeRate) / exchangeRate;
-    }
-  };
-
-  // ============================================================
   // PAYSLIP STORE (Phiếu lương điện tử)
   // ============================================================
   const payslipStore = {
@@ -828,8 +735,6 @@
     payroll: payrollStore,
     deduction: deductionStore,
     electricity: electricityStore,
-    tax: taxStore,
-    insurance: insuranceStore,
     payslip: payslipStore,
     multiPayment: multiPaymentStore,
     workflow: workflowStore,
@@ -849,89 +754,11 @@
     }
   };
 
-  // ============================================================
-  // KPI STORE
-  // ============================================================
-  const kpiStore = {
-    KEY: 'kpi_scores',
-
-    init() {
-      if (!storage.get(this.KEY)) {
-        // Seed từ config (lấy từ employee data)
-        const period = CFG.period?.code || '2026-01';
-        const seed = {};
-        seed[period] = (CFG.payrollRows || []).map((row, idx) => ({
-          empCode: row.code,
-          empName: row.name,
-          department: row.department,
-          scores: [0, 0, 0, 0], // Hoàn thành CV, Kỷ luật, Sáng kiến, Hợp tác
-          status: 'pending',
-          updatedAt: new Date().toISOString()
-        }));
-        
-        // Add some dummy initial data for UI preview like it was before
-        if (seed[period].length >= 8) {
-          seed[period][0].scores = [95,90,85,92]; seed[period][0].status = 'done';
-          seed[period][1].scores = [88,85,70,80]; seed[period][1].status = 'done';
-          seed[period][2].scores = [92,88,90,85]; seed[period][2].status = 'done';
-          seed[period][3].scores = [78,80,65,75]; seed[period][3].status = 'done';
-          seed[period][4].scores = [85,82,88,90]; seed[period][4].status = 'pending';
-          seed[period][5].scores = [72,75,60,70]; seed[period][5].status = 'pending';
-          seed[period][6].scores = [90,78,82,88]; seed[period][6].status = 'done';
-          seed[period][7].scores = [65,70,55,68]; seed[period][7].status = 'pending';
-        }
-
-        storage.set(this.KEY, seed);
-      }
-      return this;
-    },
-
-    getAll(period) {
-      const data = storage.get(this.KEY, {});
-      return data[period] || [];
-    },
-
-    update(period, empCode, scores, status = 'done') {
-      const data = storage.get(this.KEY, {});
-      if (!data[period]) data[period] = [];
-      
-      const idx = data[period].findIndex(e => e.empCode === empCode);
-      if (idx !== -1) {
-        data[period][idx].scores = scores;
-        data[period][idx].status = status;
-        data[period][idx].updatedAt = new Date().toISOString();
-      } else {
-        // Find employee info from config or employeeStore
-        const emp = employeeStore.getByCode(empCode);
-        data[period].push({
-          empCode,
-          empName: emp ? emp.name : '',
-          department: emp ? emp.department : '',
-          scores,
-          status,
-          updatedAt: new Date().toISOString()
-        });
-      }
-      storage.set(this.KEY, data);
-      return wrapResponse(data[period].find(e => e.empCode === empCode));
-    }
-  };
-
-  window.MKC_STORE.kpi = kpiStore;
-
-  // Add to initAll
-  const originalInit = initAll;
-  function initAllWithKPI() {
-    originalInit();
-    kpiStore.init();
-  }
-  window.MKC_STORE.init = initAllWithKPI;
-
   // Auto-init khi DOM ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAllWithKPI);
+    document.addEventListener('DOMContentLoaded', initAll);
   } else {
-    initAllWithKPI();
+    initAll();
   }
 
 })(window);
